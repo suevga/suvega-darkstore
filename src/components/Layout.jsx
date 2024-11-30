@@ -1,16 +1,22 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom'
 import { BarChart, Package, ShoppingCart, User, LogOut } from 'lucide-react'
 import { Button } from './ui/button'
-import { useClerk } from '@clerk/clerk-react'
-import { useLocation as useLocationHook } from "../hooks/useLocation.js"
-import { LocationError } from './LocationError.jsx'
+import { useClerk, useUser } from '@clerk/clerk-react'
+import { useLocation as useLocationHook } from '../hooks/useLocation.js'
+import { useUserStore } from '../store/userStore.js'
+import { LocationError } from './LocationError'
+import { toast } from '../hooks/use-toast.ts'
+import axiosInstance from '../api/axiosInstance.js'
 
 export function Layout() {
-  const locationPath = useLocation();
-  const navigate = useNavigate();
-  const { signOut } = useClerk();
-  const { latitude, longitude, error, requestLocation, openLocationSettings } = useLocationHook();
+  const locationPath = useLocation()
+  const navigate = useNavigate()
+  const { signOut } = useClerk()
+  const { user, isLoaded } = useUser()
+  const { latitude, longitude, error, requestLocation, openLocationSettings } = useLocationHook()
+  const { isNewUser, setIsNewUser, setDarkstoreRegistered,  darkstoreRegistered,  registrationPending, setRegistrationPending } = useUserStore();
+  const registrationAttempted = useRef(false)
 
   const menuItems = [
     { icon: BarChart, label: 'Dashboard', href: '/dashboard' },
@@ -21,30 +27,77 @@ export function Layout() {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
-      navigate('/login', { replace: true });
+      await signOut()
+      navigate('/login', { replace: true })
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Error signing out:', error)
     }
-  };
+  }
 
   useEffect(() => {
-    if (!latitude || !longitude) {
-      requestLocation();
+    if (isLoaded && user) {
+      if (!darkstoreRegistered && !registrationPending) {
+        setRegistrationPending(true);
+      }
+      
     }
-  }, [latitude, longitude]);
+  }, [isLoaded, user, darkstoreRegistered, registrationPending, setRegistrationPending])
+
+  useEffect(() => {
+    const registerDarkstore = async () => {
+      if (registrationPending && latitude && longitude && user && !registrationAttempted.current) {
+        registrationAttempted.current = true
+        console.log('Attempting to register darkstore')
+        try {
+          await axiosInstance.post('/api/v1/store/register', {
+            storename: user.username,
+            email: user.primaryEmailAddress?.emailAddress,
+            location: { latitude, longitude }
+          })
+          
+          setDarkstoreRegistered(true)
+          setIsNewUser(false)
+          setRegistrationPending(false)
+          toast({
+            title: "Registration Successful",
+            description: "Your darkstore has been registered successfully.",
+          })
+          console.log('Darkstore registered successfully')
+        } catch (error) {
+          console.error('Error sending data to backend:', error)
+          toast({
+            title: "Registration Failed",
+            description: "There was an error registering your darkstore. Please try again.",
+            variant: "destructive",
+          })
+          setRegistrationPending(false)
+          registrationAttempted.current = false
+        }
+      }
+    }
+
+    registerDarkstore()
+  }, [registrationPending, latitude, longitude, user, setIsNewUser, setDarkstoreRegistered, setRegistrationPending])
+
+  useEffect(() => {
+    if (registrationPending && (!latitude || !longitude)) {
+      console.log('Requesting location')
+      requestLocation()
+    }
+  }, [registrationPending, latitude, longitude, requestLocation])
 
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen">
         <LocationError 
-        message={error} 
-        onRetry={requestLocation}
-        onOpenSettings={openLocationSettings}
+          message={error} 
+          onRetry={requestLocation}
+          onOpenSettings={openLocationSettings}
         />
       </div>
     )
   }
+
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className="w-64 bg-white shadow-md">
@@ -58,7 +111,7 @@ export function Layout() {
                 <Button
                   variant="ghost"
                   className={`w-full justify-start px-4 py-2 text-left text-gray-600 hover:bg-gray-100 hover:text-gray-900 ${
-                    location.pathname === item.href ? 'bg-gray-100 text-gray-900' : ''
+                    locationPath.pathname === item.href ? 'bg-gray-100 text-gray-900' : ''
                   }`}
                 >
                   <item.icon className="mr-2 h-5 w-5" />

@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { BarChart, DollarSign, Package, ShoppingCart } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
 
 export default function DashboardPage() {
- 
+
   const stats = [
     { 
       title: 'Total Revenue', 
