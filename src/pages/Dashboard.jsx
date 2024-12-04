@@ -1,9 +1,23 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { BarChart, BoxIcon, DollarSign, IndianRupeeIcon, Package, ShoppingCart } from 'lucide-react';
+import { BoxIcon, Box, IndianRupeeIcon, Package, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
+import { ChartContainer, ChartTooltip } from "../components/ui/chart.tsx"
+
+
 export default function DashboardPage() {
+
+  // Sample data for average order value
+const avgOrderData = [
+  { month: "Jan", value: 2500 },
+  { month: "Feb", value: 2800 },
+  { month: "Mar", value: 2400 },
+  { month: "Apr", value: 2900 },
+  { month: "May", value: 3100 },
+  { month: "Jun", value: 2700 },
+]
 
   const stats = [
     { 
@@ -49,6 +63,45 @@ export default function DashboardPage() {
         </Card>
         </Link>
       ))}
+    </div>
+    <div className="mt-10">
+      <h1 className="text-2xl font-semibold mb-5">Average order value</h1>
+      <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Average Order Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={avgOrderData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="hsl(var(--foreground))" 
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--foreground))" 
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `₹${value}`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '4px',
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+      </Card>
     </div>
   </div>
   );
