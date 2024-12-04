@@ -2,7 +2,8 @@ import React from 'react'
 import { 
   ClerkProvider, 
   SignedIn, 
-  SignedOut, 
+  SignedOut,
+  useUser, 
 } from '@clerk/clerk-react'
 import { 
   BrowserRouter as Router, 
@@ -15,19 +16,34 @@ import {
 import RegistrationForm from './components/DarkstoreAdmin/DarkstoreAdminRegister.jsx';
 import { LoginForm } from './components/DarkstoreAdmin/DarkstoreAdminLogin.jsx';
 import { Layout } from './components/Layout.jsx'
+
+// all pages import 
 import DashboardPage from './pages/Dashboard.jsx'
 import OrdersPage from './pages/Orders.jsx'
-import InventoryPage from './pages/Inventory.jsx'
+import ProductsPage from './pages/Products.jsx'
+import BannerPage from './pages/Banner.jsx';
+import CategoryPage from './pages/Category.jsx';
+import RidersPage from './pages/Riders.jsx';
 import ProfilePage from './pages/Profile.jsx'
+import AllusersPage from './pages/Allusers.jsx';
+
+import { useUserStore } from './store/userStore.js';
+import { RegistrationVerification } from './components/RegisterInBackend.jsx';
 
 // Retrieve Clerk publishable key from environment variables
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 // Enhanced Protected Route Component
 const ProtectedRoute = ({ children }) => {
+
+  const { darkstoreRegistered } = useUserStore();
+  console.log("darkstoreRegistered: " + darkstoreRegistered);
+  
   return (
     <>
-      <SignedIn>{children}</SignedIn>
+      <SignedIn>
+        { darkstoreRegistered ? children : <RegistrationVerification/>}
+      </SignedIn>
       <SignedOut>
         <Navigate to="/login" replace />
       </SignedOut>
@@ -86,7 +102,11 @@ function App() {
           }>
             <Route index element={<DashboardPage />} />
             <Route path="orders" element={<OrdersPage />} />
-            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="products" element={<ProductsPage/>} />
+            <Route path="users" element={<AllusersPage />} />
+            <Route path="banners" element={<BannerPage />} />
+            <Route path="categories" element={<CategoryPage />} />
+            <Route path="riders" element={<RidersPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
 
