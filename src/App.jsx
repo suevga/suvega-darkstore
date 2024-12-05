@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { 
   ClerkProvider, 
   SignedIn, 
@@ -12,12 +12,11 @@ import {
   Navigate 
 } from 'react-router-dom'
 
-// Import your components
 import RegistrationForm from './components/DarkstoreAdmin/DarkstoreAdminRegister.jsx';
 import { LoginForm } from './components/DarkstoreAdmin/DarkstoreAdminLogin.jsx';
 import { Layout } from './components/Layout.jsx'
 
-// all pages import 
+// Import all pages
 import DashboardPage from './pages/Dashboard.jsx'
 import OrdersPage from './pages/Orders.jsx'
 import ProductsPage from './pages/Products.jsx'
@@ -27,22 +26,19 @@ import RidersPage from './pages/Riders.jsx';
 import ProfilePage from './pages/Profile.jsx'
 import AllusersPage from './pages/Allusers.jsx';
 
-import { useUserStore } from './store/userStore.js';
 import { RegistrationVerification } from './components/RegisterInBackend.jsx';
 
-// Retrieve Clerk publishable key from environment variables
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
-// Enhanced Protected Route Component
+
 const ProtectedRoute = ({ children }) => {
 
-  const { darkstoreRegistered } = useUserStore();
-  console.log("darkstoreRegistered: " + darkstoreRegistered);
-  
   return (
     <>
       <SignedIn>
-        { darkstoreRegistered ? children : <RegistrationVerification/>}
+        <RegistrationVerification>
+          {children}
+        </RegistrationVerification>
       </SignedIn>
       <SignedOut>
         <Navigate to="/login" replace />
@@ -51,7 +47,6 @@ const ProtectedRoute = ({ children }) => {
   );
 };
 
-// Optional: Wrapper for public routes that prevent logged-in users from accessing
 const PublicRoute = ({ children }) => {
   return (
     <>
@@ -68,7 +63,6 @@ function App() {
     <ClerkProvider publishableKey={clerkPubKey}>
       <Router>
         <Routes>
-          {/* Root route with authentication check */}
           <Route path="/" element={
             <>
               <SignedIn>
@@ -80,21 +74,18 @@ function App() {
             </>
           } />
 
-          {/* Public Registration Route with protection */}
           <Route path="/signup" element={
             <PublicRoute>
               <RegistrationForm />
             </PublicRoute>
           } />
 
-          {/* Clerk Sign In Route */}
           <Route path="/login" element={
             <PublicRoute>
               <LoginForm />
             </PublicRoute>
           } />
 
-          {/* Protected Dashboard Routes */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Layout />
@@ -110,7 +101,6 @@ function App() {
             <Route path="profile" element={<ProfilePage />} />
           </Route>
 
-          {/* Optional: 404 or Catch-all Route */}
           <Route path="*" element={
             <SignedIn>
               <Navigate to="/dashboard" replace />

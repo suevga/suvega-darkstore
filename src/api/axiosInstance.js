@@ -10,10 +10,8 @@ const axiosInstance = axios.create({
 // Add a request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
-    // You can add auth token here if needed
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    if(config.data instanceof FormData){
+      Object.assign(config.headers, config.data.getHeaders());
     }
     return config;
   },

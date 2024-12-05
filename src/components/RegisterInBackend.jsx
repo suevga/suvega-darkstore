@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import { useLocation as useLocationHook } from '../hooks/useLocation.js';
 import { useUserStore } from '../store/userStore.js';
@@ -9,11 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Loader2, MapPin } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance.js';
 
-export const RegistrationVerification = () => {
+export const RegistrationVerification = ({ children }) => {
   const [verificationStatus, setVerificationStatus] = useState('checking');
   const { user, isLoaded } = useUser();
   const { latitude, longitude, error: locationError, requestLocation } = useLocationHook();
-  const { setDarkstoreRegistered, setIsNewUser } = useUserStore();
+  const { setDarkstoreRegistered, setIsNewUser, setDarkstoreId, darkstoreRegistered } = useUserStore();
   const [registrationError, setRegistrationError] = useState(null);
 
   useEffect(() => {
@@ -23,25 +22,27 @@ export const RegistrationVerification = () => {
       if (!user?.id) return;
 
       try {
-        // First, check if the darkstore is already registered
         const response = await axiosInstance.post('/api/v1/store/check', {
           storename: user.username,
           email: user.primaryEmailAddress.emailAddress
         });
         
-        console.log("response backendor pora ahise:::: " + JSON.stringify(response));
+        console.log("Response from backend:", JSON.stringify(response.data));
         
         if (response.data.data.isRegistered) {
+          setDarkstoreId(response.data.data.storeDetails._id);
           setDarkstoreRegistered(true);
           setIsNewUser(false);
           setVerificationStatus('registered');
         } else {
           setVerificationStatus('pending');
+          setDarkstoreRegistered(false);
         }
       } catch (error) {
         console.error('Verification error:', error);
         setVerificationStatus('error');
         setRegistrationError(error.message);
+        setDarkstoreRegistered(false);
       }
     };
 
@@ -52,7 +53,7 @@ export const RegistrationVerification = () => {
     return () => {
       isSubscribed = false;
     };
-  }, [isLoaded, user, setDarkstoreRegistered, setIsNewUser]);
+  }, [isLoaded, user, setDarkstoreRegistered, setIsNewUser, setDarkstoreId]);
 
   const handleRegistration = async () => {
     if (!latitude || !longitude) {
@@ -62,12 +63,13 @@ export const RegistrationVerification = () => {
 
     setVerificationStatus('registering');
     try {
-      await axiosInstance.post('/api/v1/store/register', {
+      const response = await axiosInstance.post('/api/v1/store/register', {
         storename: user.username,
         email: user.primaryEmailAddress?.emailAddress,
         location: { latitude, longitude }
       });
 
+      setDarkstoreId(response.data.data._id);
       setDarkstoreRegistered(true);
       setIsNewUser(false);
       setVerificationStatus('registered');
@@ -78,8 +80,8 @@ export const RegistrationVerification = () => {
     }
   };
 
-  if (verificationStatus === 'registered') {
-    return <Navigate to="/dashboard" replace />;
+  if (verificationStatus === 'registered' || darkstoreRegistered) {
+    return children;
   }
 
   if (verificationStatus === 'checking' || !isLoaded) {
@@ -142,3 +144,4 @@ export const RegistrationVerification = () => {
     </div>
   );
 };
+

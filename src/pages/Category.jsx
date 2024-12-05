@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { PlusCircle, Search, Package2, Grid2X2 } from 'lucide-react'
 
 import { Button } from "../components/ui/button"
@@ -24,8 +25,55 @@ import {
   CardTitle,
 } from "../components/ui/card"
 import { Badge } from "../components/ui/badge"
+import { AddCategoryForm } from "../components/AddCategoryForm"
+
+// Sample data
+const categories = [
+  {
+    id: "CAT001",
+    name: "Groceries",
+    totalProducts: 450,
+    darkstoreId: "001",
+    addedDate: "2024-01-15",
+    status: "active",
+  },
+  {
+    id: "CAT002",
+    name: "Electronics",
+    totalProducts: 320,
+    darkstoreId: "002",
+    addedDate: "2024-01-16",
+    status: "active",
+  },
+  {
+    id: "CAT003",
+    name: "Fashion",
+    totalProducts: 280,
+    darkstoreId: "001",
+    addedDate: "2024-01-17",
+    status: "inactive",
+  },
+  {
+    id: "CAT004",
+    name: "Home & Kitchen",
+    totalProducts: 525,
+    darkstoreId: "003",
+    addedDate: "2024-01-18",
+    status: "active",
+  },
+  {
+    id: "CAT005",
+    name: "Beauty",
+    totalProducts: 190,
+    darkstoreId: "002",
+    addedDate: "2024-01-19",
+    status: "active",
+  },
+]
 
 export default function CategoriesPage() {
+  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false)
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between">
@@ -88,11 +136,21 @@ export default function CategoriesPage() {
             </SelectContent>
           </Select>
         </div>
-        <Button className="w-full md:w-auto">
+        <Button className="w-full md:w-auto" onClick={() => setShowAddCategoryForm(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Category
         </Button>
       </div>
+
+      {/* Add Category Form */}
+      {showAddCategoryForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-4">Add New Category</h2>
+            <AddCategoryForm onClose={() => setShowAddCategoryForm(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Categories Table */}
       <div className="rounded-md border">
@@ -139,48 +197,4 @@ export default function CategoriesPage() {
     </div>
   )
 }
-
-// Sample data
-const categories = [
-  {
-    id: "CAT001",
-    name: "Groceries",
-    totalProducts: 450,
-    darkstoreId: "001",
-    addedDate: "2024-01-15",
-    status: "active",
-  },
-  {
-    id: "CAT002",
-    name: "Electronics",
-    totalProducts: 320,
-    darkstoreId: "002",
-    addedDate: "2024-01-16",
-    status: "active",
-  },
-  {
-    id: "CAT003",
-    name: "Fashion",
-    totalProducts: 280,
-    darkstoreId: "001",
-    addedDate: "2024-01-17",
-    status: "inactive",
-  },
-  {
-    id: "CAT004",
-    name: "Home & Kitchen",
-    totalProducts: 525,
-    darkstoreId: "003",
-    addedDate: "2024-01-18",
-    status: "active",
-  },
-  {
-    id: "CAT005",
-    name: "Beauty",
-    totalProducts: 190,
-    darkstoreId: "002",
-    addedDate: "2024-01-19",
-    status: "active",
-  },
-]
 
