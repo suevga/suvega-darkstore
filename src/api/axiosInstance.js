@@ -11,7 +11,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     if(config.data instanceof FormData){
-      Object.assign(config.headers, config.data.getHeaders());
+      Object.assign(config.headers);
     }
     return config;
   },

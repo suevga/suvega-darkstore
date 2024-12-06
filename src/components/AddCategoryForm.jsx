@@ -1,83 +1,109 @@
 import { useState } from "react"
 import { useForm } from "react-hook-form"
-import { CalendarIcon, X } from 'lucide-react'
-import { DayPicker } from "react-day-picker";
-import { Button } from "./ui/button"
+import { useToast } from "../hooks/use-toast.ts"
+import { Button } from "./ui/button.tsx"
 import axiosInstance from "../api/axiosInstance.js"
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from "./ui/form"
-import { Input } from "./ui/input"
-import { Textarea } from "./ui/textarea"
+} from "./ui/form.tsx"
+import { Input } from "./ui/input.tsx"
+import { Textarea } from "./ui/textarea.tsx"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select"
-import { Calendar } from "./ui/calendar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "./ui/popover"
-import { useUserStore } from "../store/userStore.js";
+} from "./ui/select.tsx"
+import { useUserStore } from "../store/userStore.js"
+import { ImagePreview } from "./ImagePreview.jsx"
 
-export function AddCategoryForm({ onClose }) {
-  const [date, setDate] = useState()
-  const { darkstoreId } = useUserStore();
+export function AddCategoryForm({ onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false)
+  const { darkstoreId } = useUserStore()
+  const { toast } = useToast();
+
   const form = useForm({
     defaultValues: {
       categoryName: "",
       description: "",
-      status: "private"
+      status: "private",
+      featuredImage: null
     },
   })
 
   async function onSubmit(values) {
-    console.log("values coming from form::",values)
-    console.log("this is the darkstoreId::", darkstoreId);
-    
     try {
-      if(values.featuredImage){
-        const res = await axiosInstance.post("/api/v1/category/admin/addcategory", {
-          categoryName: values.categoryName,
-          description: values.description,
-          darkStoreId: darkstoreId,
-          status: values.status,
-          featuredImage: values.featuredImage
-        }, { headers: { 'Content-Type': 'multipart/form-data'} })
-        
-        console.log("response ahise backendor pora: " + JSON.stringify(res));
+      setLoading(true)
+      const formData = new FormData()
+      
+      // Append all form fields to FormData
+      formData.append('categoryName', values.categoryName)
+      formData.append('description', values.description)
+      formData.append('darkStoreId', darkstoreId)
+      formData.append('status', values.status)
+      
+      if (values.featuredImage) {
+        formData.append('featuredImage', values.featuredImage)
       }
 
-
+      const response = await axiosInstance.post(
+        "/api/v1/category/admin/addcategory", 
+        formData,
+        { 
+          headers: { 'Content-Type': 'multipart/form-data' },
+          params: { darkstoreId }
+        }
+      )
+      console.log("response: " + JSON.stringify(response));
+      if (response.status === 200) {
+        toast({
+          title: "Category Created",
+          description: "New category created successfully"
+        })
+      }
+      onSuccess?.()
+      onClose()
       
     } catch (error) {
-      console.log("error sending data to server:: " + error);
-      
+      console.error("Error creating category:", error)
+      toast({
+        title: "Error Creating Category",
+        description: error.message || "server error creating category",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
     }
-    onClose()
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="categoryName"
+          rules={{ 
+            required: "Category name is required",
+            minLength: {
+              value: 2,
+              message: "Category name must be at least 2 characters"
+            }
+          }}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Category Name</FormLabel>
               <FormControl>
-                <Input placeholder="Enter category name" {...field} />
+                <Input 
+                  placeholder="Enter category name" 
+                  {...field} 
+                  disabled={loading}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -87,13 +113,22 @@ export function AddCategoryForm({ onClose }) {
         <FormField
           control={form.control}
           name="description"
+          rules={{
+            required: "Description is required",
+            minLength: {
+              value: 10,
+              message: "Description must be at least 10 characters"
+            }
+          }}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Enter category description"
+                  className="min-h-[100px]"
                   {...field}
+                  disabled={loading}
                 />
               </FormControl>
               <FormMessage />
@@ -104,18 +139,23 @@ export function AddCategoryForm({ onClose }) {
         <FormField
           control={form.control}
           name="status"
+          rules={{ required: "Status is required" }}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value}
+                disabled={loading}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select category status" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="published">published</SelectItem>
-                  <SelectItem value="private">private</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -126,29 +166,63 @@ export function AddCategoryForm({ onClose }) {
         <FormField
           control={form.control}
           name="featuredImage"
-          render={({ field }) => (
+          rules={{
+            required: "Featured image is required",
+            validate: {
+              fileSize: (value) => {
+                if (!value) return true
+                return value.size <= 5000000 || "Image must be less than 5MB"
+              },
+              fileType: (value) => {
+                if (!value) return true
+                return [
+                  'image/jpeg',
+                  'image/png',
+                  'image/webp'
+                ].includes(value.type) || "Only JPEG, PNG and WebP images are allowed"
+              }
+            }
+          }}
+          render={({ field: { value, onChange, ...field } }) => (
             <FormItem>
               <FormLabel>Featured Image</FormLabel>
               <FormControl>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    field.onChange(e.target.files ? e.target.files[0] : null)
-                  }
-                />
+                <div className="space-y-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      onChange(file)
+                    }}
+                    disabled={loading}
+                    {...field}
+                  />
+                  {value && <ImagePreview file={value} />}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="flex justify-end space-x-4">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit">Add Category</Button>
+        <div className="flex justify-end space-x-4 pt-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Creating..." : "Add Category"}
+          </Button>
         </div>
       </form>
     </Form>
   )
 }
-
