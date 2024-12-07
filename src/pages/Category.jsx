@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react'
-import { PlusCircle, Search, Package2, Grid2X2, ChevronLeft, ChevronRight } from 'lucide-react'
-import axiosInstance from "../api/axiosInstance"
-import { useUserStore } from "../store/userStore.js"
+import React from 'react';
+import { useState, useEffect } from 'react';
+import { PlusCircle, Search, Package2, Grid2X2, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import axiosInstance from "../api/axiosInstance";
+import { useUserStore } from "../store/userStore.js";
 
-import { Button } from "../components/ui/button"
-import { Input } from "../components/ui/input"
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select.tsx"
+} from "../components/ui/select";
 import {
   Table,
   TableBody,
@@ -19,34 +20,42 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../components/ui/table.tsx"
+} from "../components/ui/table";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../components/ui/card.tsx"
-import { Badge } from "../components/ui/badge.tsx"
-import { AddCategoryForm } from "../components/AddCategoryForm.jsx"
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { AddCategoryForm } from "../components/AddCategoryForm";
+import { EditCategoryForm } from "../components/EditCategoryForm.jsx"
+import { DeleteCategoryDialog } from '../components/DeleteCategoryDialog.jsx';
+import { useToast } from "../hooks/use-toast.ts"
 
 export default function CategoriesPage() {
-  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false)
-  const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const { darkstoreId } = useUserStore()
+  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
+  const [showEditCategoryForm, setShowEditCategoryForm] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const { darkstoreId } = useUserStore();
+  const { toast } = useToast();
   
-  // Pagination and filter states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [totalCategories, setTotalCategories] = useState(0)
+// Pagination and filter states
+const [currentPage, setCurrentPage] = useState(1);
+const [totalPages, setTotalPages] = useState(1);
+const [searchTerm, setSearchTerm] = useState("");
+const [statusFilter, setStatusFilter] = useState("all");
+const [totalCategories, setTotalCategories] = useState(0);
+const [totalProducts, setTotalProducts] = useState(0);
 
   const fetchCategories = async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       
       const response = await axiosInstance.get("/api/v1/category/admin/getcategories", {
         params: {
@@ -56,48 +65,75 @@ export default function CategoriesPage() {
           search: searchTerm,
           status: statusFilter
         }
-      })
-      console.log("fetching categories successfully::", JSON.stringify(response));
+      });
       
-      const { data } = response.data
-      setCategories(data.categories)
-      setTotalPages(data.pagination.totalPages)
-      setTotalCategories(data.pagination.total)
+      const { data } = response.data;
+      setCategories(data.categories);
+      setTotalPages(data.pagination.totalPages);
+      setTotalCategories(data.pagination.total);
+      setTotalProducts(data.totalProducts);
       
     } catch (err) {
-      setError("Failed to fetch categories")
-      console.error("Error fetching categories:", err)
+      setError("Failed to fetch categories");
+      console.error("Error fetching categories:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  // Fetch categories when component mounts or filters change
   useEffect(() => {
-    fetchCategories()
-  }, [currentPage, searchTerm, statusFilter, darkstoreId])
+    fetchCategories();
+  }, [currentPage, searchTerm, statusFilter, darkstoreId]);
 
-  // Handle search with debounce
+  const handleEditClick = (category) => {
+    setSelectedCategory(category);
+    setShowEditCategoryForm(true);
+  };
+
+  const handleDeleteClick = (category) => {
+    setSelectedCategory(category);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await axiosInstance.delete(`/api/v1/category/admin/category/${selectedCategory._id}`);
+      toast({
+        title: "Category deleted",
+        description: "Category has been successfully deleted",
+        variant: "success",
+      });
+      fetchCategories();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete category",
+        variant: "destructive",
+      });
+    } finally {
+      setShowDeleteDialog(false);
+      setSelectedCategory(null);
+    }
+  };
+
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value)
-    setCurrentPage(1) // Reset to first page when searching
-  }
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
 
-  // Handle status filter change
   const handleStatusFilter = (value) => {
-    setStatusFilter(value)
-    setCurrentPage(1) // Reset to first page when filtering
-  }
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
 
-  // Pagination controls
   const handlePreviousPage = () => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1))
-  }
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
 
   const handleNextPage = () => {
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-  }
-
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+  
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between">
@@ -105,7 +141,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
@@ -113,6 +149,28 @@ export default function CategoriesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalCategories}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalProducts}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Products/Category</CardTitle>
+            <Package2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {totalCategories ? Math.round(totalProducts / totalCategories) : 0}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -146,23 +204,42 @@ export default function CategoriesPage() {
         </Button>
       </div>
 
-      {/* Add Category Form Modal */}
       {showAddCategoryForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full">
             <h2 className="text-2xl font-bold mb-4">Add New Category</h2>
             <AddCategoryForm onClose={() => {
-              setShowAddCategoryForm(false)
-              fetchCategories() // Refresh the list after adding
+              setShowAddCategoryForm(false);
+              fetchCategories();
             }} />
           </div>
         </div>
       )}
 
-      {/* Loading and Error States */}
       {loading && <div className="text-center py-4">Loading categories...</div>}
       {error && <div className="text-red-500 text-center py-4">{error}</div>}
 
+      {showEditCategoryForm && selectedCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-4">Edit Category</h2>
+            <EditCategoryForm 
+              category={selectedCategory} 
+              onClose={() => {
+                setShowEditCategoryForm(false);
+                setSelectedCategory(null);
+                fetchCategories();
+              }} 
+            />
+          </div>
+        </div>
+      )}
+      <DeleteCategoryDialog 
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteConfirm}
+        categoryName={selectedCategory?.categoryName}
+      />
       {/* Categories Table */}
       <div className="rounded-md border">
         <Table>
@@ -170,6 +247,7 @@ export default function CategoriesPage() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Description</TableHead>
+              <TableHead>Products</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Added Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -181,16 +259,25 @@ export default function CategoriesPage() {
                 <TableCell className="font-medium">{category.categoryName}</TableCell>
                 <TableCell>{category.description}</TableCell>
                 <TableCell>
+                  <Badge variant="secondary" className="font-mono">
+                    {category.productCount}
+                  </Badge>
+                </TableCell>
+                <TableCell>
                   <Badge variant={category.status === "published" ? "default" : "secondary"}>
                     {category.status}
                   </Badge>
                 </TableCell>
                 <TableCell>{new Date(category.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm">
+                  <Button
+                  onClick={()=> handleEditClick(category)} 
+                  variant="ghost" 
+                  size="sm">
                     Edit
                   </Button>
                   <Button 
+                    onClick={()=> handleDeleteClick(category)}
                     variant="ghost" 
                     size="sm" 
                     className="text-red-600 hover:text-red-900 hover:bg-red-50"
@@ -231,5 +318,5 @@ export default function CategoriesPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

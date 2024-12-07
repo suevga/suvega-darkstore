@@ -20,11 +20,11 @@ import {
   SelectValue,
 } from "./ui/select"
 import { Button } from "./ui/button"
-import { title } from "process"
 
 export function EditCategoryForm({ category, onClose }) {
   const [loading, setLoading] = useState(false)
-
+  const { toast } = useToast();
+  
   const form = useForm({
     defaultValues: {
       categoryName: category.categoryName,
