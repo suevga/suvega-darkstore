@@ -60,7 +60,7 @@ export function AddCategoryForm({ onClose, onSuccess }) {
           params: { darkstoreId }
         }
       )
-      console.log("response: " + JSON.stringify(response));
+
       if (response.status === 200) {
         toast({
           title: "Category Created",

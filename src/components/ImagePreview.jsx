@@ -21,7 +21,7 @@ export function ImagePreview({ file }) {
   }
 
   return (
-    <div className="mt-2">
+    <div className="w-full">
       <img
         src={preview}
         alt="Preview"

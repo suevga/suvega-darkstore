@@ -32,25 +32,24 @@ import { AddCategoryForm } from "../components/AddCategoryForm";
 import { EditCategoryForm } from "../components/EditCategoryForm.jsx"
 import { DeleteCategoryDialog } from '../components/DeleteCategoryDialog.jsx';
 import { useToast } from "../hooks/use-toast.ts"
-
+import { useCategoryStore } from "../store/categoryStore.js"
+import { useProductStore } from "../store/productStore.js"
 export default function CategoriesPage() {
   const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
   const [showEditCategoryForm, setShowEditCategoryForm] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { darkstoreId } = useUserStore();
   const { toast } = useToast();
-  
+  const { setTotalCategoryCount, totalCategoryCount, setCategories, categories } = useCategoryStore();
+  const { totalProducts }  = useProductStore();
 // Pagination and filter states
 const [currentPage, setCurrentPage] = useState(1);
 const [totalPages, setTotalPages] = useState(1);
 const [searchTerm, setSearchTerm] = useState("");
 const [statusFilter, setStatusFilter] = useState("all");
-const [totalCategories, setTotalCategories] = useState(0);
-const [totalProducts, setTotalProducts] = useState(0);
 
   const fetchCategories = async () => {
     try {
@@ -67,11 +66,11 @@ const [totalProducts, setTotalProducts] = useState(0);
         }
       });
       
+      
       const { data } = response.data;
       setCategories(data.categories);
       setTotalPages(data.pagination.totalPages);
-      setTotalCategories(data.pagination.total);
-      setTotalProducts(data.totalProducts);
+      setTotalCategoryCount(data.pagination.total);
       
     } catch (err) {
       setError("Failed to fetch categories");
@@ -85,6 +84,8 @@ const [totalProducts, setTotalProducts] = useState(0);
     fetchCategories();
   }, [currentPage, searchTerm, statusFilter, darkstoreId]);
 
+
+  
   const handleEditClick = (category) => {
     setSelectedCategory(category);
     setShowEditCategoryForm(true);
@@ -134,6 +135,7 @@ const [totalProducts, setTotalProducts] = useState(0);
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
   
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between">
@@ -141,14 +143,14 @@ const [totalProducts, setTotalProducts] = useState(0);
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
             <Grid2X2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalCategories}</div>
+            <div className="text-2xl font-bold">{totalCategoryCount}</div>
           </CardContent>
         </Card>
 
@@ -159,18 +161,6 @@ const [totalProducts, setTotalProducts] = useState(0);
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalProducts}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Products/Category</CardTitle>
-            <Package2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {totalCategories ? Math.round(totalProducts / totalCategories) : 0}
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -245,6 +235,7 @@ const [totalProducts, setTotalProducts] = useState(0);
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>FeaturedImage</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Products</TableHead>
@@ -256,6 +247,14 @@ const [totalProducts, setTotalProducts] = useState(0);
           <TableBody>
             {categories.map((category) => (
               <TableRow key={category._id}>
+                <TableCell>
+                  <img
+                  src={category.featuredImage}
+                  width={80}
+                  className="w-[80px] h-[80px] rounded-[50%] border-2 border-red-300 cursor-pointer"
+                  alt="featured-image"
+                  />
+                </TableCell>
                 <TableCell className="font-medium">{category.categoryName}</TableCell>
                 <TableCell>{category.description}</TableCell>
                 <TableCell>
