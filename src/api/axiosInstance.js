@@ -1,7 +1,10 @@
 import axios from 'axios';
+import { envConfig } from '../utility/env.config.js';
+
+console.log("backendUrl", envConfig.backendUrl);
 
 const axiosInstance = axios.create({
-  baseURL: 'https://in10-backend.onrender.com',
+  baseURL: envConfig.backendUrl,
   // baseURL: 'http://localhost:8080',
   headers: {
     'Content-Type': 'application/json',

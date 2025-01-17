@@ -1,9 +1,8 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { 
   ClerkProvider, 
   SignedIn, 
   SignedOut,
-  useUser, 
 } from '@clerk/clerk-react'
 import { 
   BrowserRouter as Router, 
@@ -25,7 +24,6 @@ import CategoryPage from './pages/Category.jsx';
 import RidersPage from './pages/Riders.jsx';
 import ProfilePage from './pages/Profile.jsx'
 import AllusersPage from './pages/Allusers.jsx';
-
 import { RegistrationVerification } from './components/RegisterInBackend.jsx';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY

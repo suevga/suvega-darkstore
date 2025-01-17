@@ -1,3 +1,4 @@
+import axiosInstance from "../api/axiosInstance";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input"
 import {
@@ -8,18 +9,39 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table"
-import { Users, TrendingUp, ShoppingBag } from 'lucide-react'
-
-// Mock data for demonstration
-const mockUsers = [
-  { id: 1, name: "John Doe", phone: "+1 234 567 890", orderedProducts: 5 },
-  { id: 2, name: "Jane Smith", phone: "+1 234 567 891", orderedProducts: 3 },
-  { id: 3, name: "Bob Johnson", phone: "+1 234 567 892", orderedProducts: 7 },
-  { id: 4, name: "Alice Williams", phone: "+1 234 567 893", orderedProducts: 2 },
-  { id: 5, name: "Charlie Brown", phone: "+1 234 567 894", orderedProducts: 4 },
-]
+import { Users, TrendingUp } from 'lucide-react'
+import { useDarkStore } from "../store/darkStore";
+import { useEffect } from "react";
+import { useUserStore } from "../store/allUsersStore.js"
+ 
 
 export default function AllUsersPage() {
+  const { darkstoreId } = useDarkStore()
+  console.log("darkstoreId::", darkstoreId);
+
+  const { setUsers, users } = useUserStore();
+
+  console.log("users lists before fetching::", users);
+
+  const fetchUsers = async () => {
+    // Fetch users from the server
+    try {
+      const response = await axiosInstance.get(`/api/v1/users/userlists/${darkstoreId}`)
+      if (response.status === 200) {
+        // Set the users in the state
+        setUsers(response.data.data.users);
+      }
+    } catch (error) {
+      console.log("error fetching users", error);
+    }
+  }
+  console.log("users lists after fetching::", users);
+  
+  useEffect(() => {
+    if (darkstoreId) {
+      fetchUsers()
+    }
+  }, [darkstoreId])
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">All Users</h1>
@@ -32,7 +54,7 @@ export default function AllUsersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockUsers.length}</div>
+            <div className="text-2xl font-bold">{users.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -41,7 +63,7 @@ export default function AllUsersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{users.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -72,15 +94,17 @@ export default function AllUsersPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mockUsers.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell>{user.id}</TableCell>
+          {
+            users.map((user)=> (
+              <TableRow key={user.id}>
+              <TableCell>{user._id}</TableCell>
               <TableCell>{user.name}</TableCell>
-              <TableCell>{user.phone}</TableCell>
+              <TableCell>{user.phoneNumber}</TableCell>
               <TableCell>{user.orderedProducts}</TableCell>
-              <TableCell>{new Date().toLocaleDateString()}</TableCell>
+              <TableCell></TableCell>
             </TableRow>
-          ))}
+            ))
+          }
         </TableBody>
       </Table>
     </div>

@@ -1,8 +1,8 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { PlusCircle, Search, Package2, Grid2X2, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
+import { PlusCircle, Search, Grid2X2, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import axiosInstance from "../api/axiosInstance";
-import { useUserStore } from "../store/userStore.js";
+import { useDarkStore } from "../store/darkStore.js";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -34,6 +34,8 @@ import { DeleteCategoryDialog } from '../components/DeleteCategoryDialog.jsx';
 import { useToast } from "../hooks/use-toast.ts"
 import { useCategoryStore } from "../store/categoryStore.js"
 import { useProductStore } from "../store/productStore.js"
+
+
 export default function CategoriesPage() {
   const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
   const [showEditCategoryForm, setShowEditCategoryForm] = useState(false);
@@ -41,7 +43,7 @@ export default function CategoriesPage() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { darkstoreId } = useUserStore();
+  const { darkstoreId } = useDarkStore();
   const { toast } = useToast();
   const { setTotalCategoryCount, totalCategoryCount, setCategories, categories } = useCategoryStore();
   const { totalProducts }  = useProductStore();

@@ -1,13 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { BoxIcon, Box, IndianRupeeIcon, Package, ShoppingCart } from 'lucide-react';
+import { BoxIcon, IndianRupeeIcon, Package, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
-import { ChartContainer, ChartTooltip } from "../components/ui/chart.tsx"
-
+import { useDarkStore } from '../store/darkStore.js';
 
 export default function DashboardPage() {
+
 
   // Sample data for average order value
 const avgOrderData = [

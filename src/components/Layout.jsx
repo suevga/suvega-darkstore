@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom'
-import { BarChart, Package, ShoppingCart, User, LogOut, ChevronRight, ChevronLeft, User2Icon, Package2, Box, Bike, Image } from 'lucide-react'
+import { BarChart, ShoppingCart, User, LogOut, ChevronRight, ChevronLeft, User2Icon, Package2, Box, Bike, Image } from 'lucide-react'
 import { Button } from './ui/button'
-import { useClerk, useUser } from '@clerk/clerk-react'
+import { useClerk } from '@clerk/clerk-react'
 import { useLocation as useLocationHook } from '../hooks/useLocation.js'
-import { useUserStore } from '../store/userStore.js'
 import { LocationError } from './LocationError.jsx'
 import { cn } from '../lib/utils.ts';
 
@@ -13,8 +12,7 @@ export const Layout = ()=> {
   const locationPath = useLocation()
   const navigate = useNavigate()
   const { signOut } = useClerk()
-  const { user, isLoaded } = useUser()
-  const { latitude, longitude, error, requestLocation, openLocationSettings } = useLocationHook()
+  const { error, requestLocation, openLocationSettings } = useLocationHook()
 
   const menuItems = [
     { icon: BarChart, label: 'Dashboard', href: '/dashboard' },

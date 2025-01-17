@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useSignUp } from '@clerk/clerk-react';
 import { useToast } from '../../hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { useUserStore } from '../../store/userStore';
+import { useDarkStore } from '../../store/darkStore.js';
 
 export default function RegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -15,7 +15,7 @@ export default function RegistrationForm() {
   const { signUp, isLoaded, setActive } = useSignUp();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { setIsNewUser, setDarkstoreRegistered, setRegistrationPending } = useUserStore();
+  const { setIsNewUser, setDarkstoreRegistered, setRegistrationPending } = useDarkStore();
 
   // Initialize form with react-hook-form and zod resolver
   const form = useForm({

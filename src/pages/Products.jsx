@@ -28,7 +28,7 @@ import { Badge } from "../components/ui/badge";
 import { DeleteProductDialog } from '../components/DeleteProductDialog.jsx';
 import { useToast } from "../hooks/use-toast.ts"
 import { useCategoryStore } from "../store/categoryStore.js"
-import { useUserStore } from '../store/userStore.js';
+import { useDarkStore } from '../store/darkStore.js';
 import { AddProductForm } from '../components/AddProductForm.jsx';
 import { ChevronLeft, ChevronRight, Grid2X2, PlusCircle, Search, ShoppingBag } from 'lucide-react';
 import { EditProductForm } from "../components/EditProductForm.jsx"
@@ -40,7 +40,7 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { darkstoreId } = useUserStore();
+  const { darkstoreId } = useDarkStore();
   const { toast } = useToast();
   const { setProducts, products, setTotalProducts, totalProducts } = useProductStore();
   const { totalCategoryCount } = useCategoryStore();

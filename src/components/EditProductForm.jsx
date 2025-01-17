@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select"
-import { useUserStore } from "../store/userStore"
+import { useDarkStore } from "../store/darkStore.js"
 import { useCategoryStore } from "../store/categoryStore"
 import { ImagePreview } from "./ImagePreview"
 
@@ -29,7 +29,7 @@ export function EditProductForm({ product, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
   const [productImages, setProductImages] = useState([])
   const [existingImages, setExistingImages] = useState([])
-  const { darkstoreId } = useUserStore()
+  const { darkstoreId } = useDarkStore()
   const { categories } = useCategoryStore()
   const { toast } = useToast()
 

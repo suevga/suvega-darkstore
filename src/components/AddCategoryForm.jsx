@@ -20,12 +20,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select.tsx"
-import { useUserStore } from "../store/userStore.js"
+import { useDarkStore } from "../store/darkStore.js"
 import { ImagePreview } from "./ImagePreview.jsx"
 
 export function AddCategoryForm({ onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
-  const { darkstoreId } = useUserStore()
+  const { darkstoreId } = useDarkStore()
   const { toast } = useToast();
 
   const form = useForm({

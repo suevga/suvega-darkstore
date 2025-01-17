@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { useLocation as useLocationHook } from '../hooks/useLocation.js';
-import { useUserStore } from '../store/userStore.js';
+import { useDarkStore } from '../store/darkStore.js';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -12,14 +12,13 @@ export const RegistrationVerification = ({ children }) => {
   const { user, isLoaded } = useUser();
   const { latitude, longitude, error: locationError, requestLocation } = useLocationHook();
   const {
-    isNewUser,
     darkstoreRegistered,
     registrationPending,
     setDarkstoreRegistered,
     setIsNewUser,
     setRegistrationPending,
     setDarkstoreId,
-  } = useUserStore();
+  } = useDarkStore();
 
   const [verificationError, setVerificationError] = useState(null);
 
@@ -27,28 +26,17 @@ export const RegistrationVerification = ({ children }) => {
 
     const verifyRegistration = async () => {
       if (!user?.id) return;
-      console.log("darkstore register hoi ne nohoi checking start hoise");
-      
       setRegistrationPending(true);
-      
-      console.log("darkstored status before check::", darkstoreRegistered);
       try {
-        console.log("checking request goise backend");
-        
         const response = await axiosInstance.post('/api/v1/store/check', {
           storename: user.username,
           email: user.primaryEmailAddress.emailAddress
         });
         
-        
-        console.log("response received");
-        console.log("deployed backend or pora response ahile:: " + JSON.stringify(response.data));
-        
         if (response.data.data.isRegistered) {
           setDarkstoreId(response.data.data.storeDetails._id);
           setDarkstoreRegistered(true);
           setIsNewUser(false);
-          console.log("darkstored status after response::", darkstoreRegistered);
         } else {
           setDarkstoreRegistered(false);
         }
@@ -63,8 +51,6 @@ export const RegistrationVerification = ({ children }) => {
     if (isLoaded && user) {
       verifyRegistration();
     }
-
-    console.log("darkstore status after checking complete::", darkstoreRegistered);
     
   }, [isLoaded, user, setDarkstoreRegistered, setIsNewUser, setDarkstoreId, setRegistrationPending]);
 
@@ -76,7 +62,6 @@ export const RegistrationVerification = ({ children }) => {
     
     setRegistrationPending(true);
     try {
-      console.log("darkstore registration status false huwar karone register start hoise");
       const response = await axiosInstance.post('/api/v1/store/register', {
         storename: user.username,
         email: user.primaryEmailAddress?.emailAddress,
@@ -84,13 +69,9 @@ export const RegistrationVerification = ({ children }) => {
       });
 
       if (response.data?.data) {
-        console.log("deployed backend or pora response ahile after register new store:: " + JSON.stringify(response.data));
-        
         setDarkstoreId(response.data.data._id);
         setDarkstoreRegistered(true);
-        setIsNewUser(false);  
-        console.log("Darkstore registered status::", darkstoreRegistered);
-        
+        setIsNewUser(false); 
       } else {
         setVerificationError("registration failed")
       }

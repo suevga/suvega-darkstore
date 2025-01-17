@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useLocationStore } from '../store/store.js'
+import { useLocationStore } from '../store/locationStore'
 
 export const useLocation = () => {
   const [error, setError] = useState(null)
