@@ -37,10 +37,19 @@ export default function ProfilePage() {
   })
 
   const fetchDarkstoreDetails = async () => {
+    if (!darkstoreId) {
+      toast({
+        title: "Error",
+        description: "No darkstore ID found",
+        variant: "destructive"
+      });
+      return;
+    }
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/api/v1/store/getStore/${darkstoreId}`);
-
+      console.log("darkstore details paisu backend or pora::", JSON.stringify(response));
+      
       if (response.status === 200) {
         setDarkstoreDetails(response.data.data);
         toast({
@@ -53,17 +62,30 @@ export default function ProfilePage() {
       setLoading(false);
       toast({
         title: "Error fetching darkstore details",
+        description: error.response?.data?.message || "Error fetching darkstore details",
         variant: "destructive"
       })
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleUpdateAddress = async (data) => {
+    if (!darkstoreId) {
+      toast({
+        title: "Error",
+        description: "No darkstore ID found",
+        variant: "destructive"
+      });
+      return;
+    }
     try {
       setLoading(true);
       console.log("data from useForm::", data);
       
-      const response = await axiosInstance.patch(`/api/v1/store/updateAddress/${darkstoreId}`, data);
+      const response = await axiosInstance.patch(`/api/v1/store/updateAddress/${darkstoreId}`, {
+        address: data.address
+      });
 
       if (response.status === 200) {
         console.log("updated darkstore details::", JSON.stringify(response.data.data.updatedStore));
@@ -80,16 +102,34 @@ export default function ProfilePage() {
       setIsEditing(false);
       toast({
         title: "Error updating darkstore details",
+        description: error.response?.data?.message || "Error updating address",
         variant: "destructive"
       })
+    } finally {
+      setLoading(false)
     }
   };
 
   useEffect(() => {
-    if (darkstoreDetails === null && darkstoreDetails === undefined) {
+    if (!darkstoreDetails || Object.keys(darkstoreDetails).length === 0) {
       fetchDarkstoreDetails();
     }
   }, [darkstoreId]);
+
+  // Pre-populate form when editing
+  useEffect(() => {
+    if (isEditing && darkstoreDetails?.address) {
+      form.reset({
+        address: {
+          city: darkstoreDetails.address.city || "",
+          street: darkstoreDetails.address.street || "",
+          district: darkstoreDetails.address.district || "",
+          state: darkstoreDetails.address.state || "",
+          pincode: darkstoreDetails.address.pincode || ""
+        }
+      });
+    }
+  }, [isEditing, darkstoreDetails]);
 
   console.log("dark store details after fetch::", darkstoreDetails);
   return (
@@ -237,10 +277,15 @@ export default function ProfilePage() {
                   <div>
                     <h2>Name: {darkstoreDetails.storename}</h2>
                     <h4>Email: {darkstoreDetails.email}</h4>
-                    <h4>City: {darkstoreDetails.address.city}</h4>
-                    <h4>Street: {darkstoreDetails.address.street}</h4>
-                    <h4>District: {darkstoreDetails.address.district}</h4>
-                    <h4>State: {darkstoreDetails.address.state}</h4>
+                    {darkstoreDetails.address && (
+                    <>
+                      <h4>City: {darkstoreDetails.address.city}</h4>
+                      <h4>Street: {darkstoreDetails.address.street}</h4>
+                      <h4>District: {darkstoreDetails.address.district}</h4>
+                      <h4>State: {darkstoreDetails.address.state}</h4>
+                      <h4>Pincode: {darkstoreDetails.address.pincode}</h4>
+                    </>
+                  )}
                   </div>
                 )
               }
