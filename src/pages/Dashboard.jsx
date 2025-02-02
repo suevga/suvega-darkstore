@@ -1,12 +1,16 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { BoxIcon, IndianRupeeIcon, Package, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
-import { useDarkStore } from '../store/darkStore.js';
+import { useCategoryStore } from "../store/categoryStore.js";
+import { useProductStore } from "../store/productStore.js";
+import  useOrderStore from "../store/orderStore.js";
 
 export default function DashboardPage() {
-
+  const { totalCategoryCount } = useCategoryStore();
+  const { totalProducts } = useProductStore()
+  const { totalOrderCount } = useOrderStore();
 
   // Sample data for average order value
 const avgOrderData = [
@@ -27,19 +31,19 @@ const avgOrderData = [
     },
     { 
       title: 'Orders', 
-      value: '5000', 
+      value: `${totalOrderCount}`, 
       icon: ShoppingCart,
       href: '/dashboard/orders' 
     },
     { 
       title: 'Products', 
-      value: '3000', 
+      value: `${totalProducts}`, 
       icon: Package,
       href: '/dashboard/products' 
     },
     { 
       title: 'Categories', 
-      value: '1575', 
+      value: `${totalCategoryCount}`, 
       icon: BoxIcon,
       href: '/dashboard/categories' 
     },

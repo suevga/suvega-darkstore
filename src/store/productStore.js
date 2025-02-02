@@ -8,6 +8,9 @@ export const useProductStore = create(
       totalProducts:0,
       setProducts: (products)=> set({ products }),
       setTotalProducts: (count)=> set({ totalProducts: count }),
-    })
+    }),
+    {
+      name: "product-store"
+    }
   )
 )

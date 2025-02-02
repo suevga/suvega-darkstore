@@ -3,7 +3,7 @@ import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom'
 import { BarChart, ShoppingCart, User, LogOut, ChevronRight, ChevronLeft, User2Icon, Package2, Box, Bike, Image } from 'lucide-react'
 import { Button } from './ui/button'
 import { useClerk } from '@clerk/clerk-react'
-import { useLocation as useLocationHook } from '../hooks/useLocation.js'
+import { useGoogleLocation } from '../hooks/useLocation.js'
 import { LocationError } from './LocationError.jsx'
 import { cn } from '../lib/utils.ts';
 
@@ -12,7 +12,7 @@ export const Layout = ()=> {
   const locationPath = useLocation()
   const navigate = useNavigate()
   const { signOut } = useClerk()
-  const { error, requestLocation, openLocationSettings } = useLocationHook()
+  const { error, requestLocation, loading } = useGoogleLocation()
 
   const menuItems = [
     { icon: BarChart, label: 'Dashboard', href: '/dashboard' },
@@ -39,7 +39,6 @@ export const Layout = ()=> {
         <LocationError 
           message={error} 
           onRetry={requestLocation}
-          onOpenSettings={openLocationSettings}
         />
       </div>
     )

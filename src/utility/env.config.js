@@ -8,4 +8,5 @@ export const envConfig = {
   firebaseMeasurementId: String(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID),
   firebaseVAPID: String(import.meta.env.VITE_FIREBASE_VAPID_KEY),
   backendUrl: String(import.meta.env.VITE_BASE_API_URL),
+  googleApiKey: String(import.meta.env.VITE_GOOGLE_API_KEY)
 }

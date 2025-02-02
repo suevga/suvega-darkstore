@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '@clerk/clerk-react';
-import { useLocation as useLocationHook } from '../hooks/useLocation.js';
+import { useGoogleLocation } from '../hooks/useLocation.js';
 import { useDarkStore } from '../store/darkStore.js';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
@@ -10,7 +10,7 @@ import axiosInstance from '../api/axiosInstance.js';
 
 export const RegistrationVerification = ({ children }) => {
   const { user, isLoaded } = useUser();
-  const { latitude, longitude, error: locationError, requestLocation } = useLocationHook();
+  const { latitude, longitude, error: locationError, requestLocation, loading } = useGoogleLocation();
   const {
     darkstoreRegistered,
     registrationPending,
@@ -20,10 +20,12 @@ export const RegistrationVerification = ({ children }) => {
     setDarkstoreId,
   } = useDarkStore();
 
+  console.log("latitude in register backend page::", latitude);
+  console.log("longitude in register backend page::", longitude);
+  
   const [verificationError, setVerificationError] = useState(null);
 
   useEffect(() => {
-
     const verifyRegistration = async () => {
       if (!user?.id) return;
       setRegistrationPending(true);
@@ -32,6 +34,7 @@ export const RegistrationVerification = ({ children }) => {
           storename: user.username,
           email: user.primaryEmailAddress.emailAddress
         });
+        console.log("response from backend in register page::", JSON.stringify(response));
         
         if (response.data.data.isRegistered) {
           setDarkstoreId(response.data.data.storeDetails._id);
@@ -68,6 +71,8 @@ export const RegistrationVerification = ({ children }) => {
         location: { latitude, longitude }
       });
 
+      console.log("response after sucessfull register::", JSON.stringify(response));
+      
       if (response.data?.data) {
         setDarkstoreId(response.data.data._id);
         setDarkstoreRegistered(true);
