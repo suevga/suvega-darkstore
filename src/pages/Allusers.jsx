@@ -59,7 +59,7 @@ export default function AllUsersPage() {
       setLoading(false);
     }
   }
-  console.log("users lists after fetching::", users);
+  console.log("users lists after fetching::", users.address);
   
   // Filter users based on search term
   const filteredUsers = users.filter(user => 
@@ -134,7 +134,7 @@ export default function AllUsersPage() {
               <TableHead>Name</TableHead>
               <TableHead>Phone Number</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Cart Items</TableHead>
+              <TableHead>Address</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -142,10 +142,13 @@ export default function AllUsersPage() {
               filteredUsers.map((user) => (
                 <TableRow key={user._id}>
                   <TableCell className="font-medium">{user._id}</TableCell>
-                  <TableCell>{user.name || 'N/A'}</TableCell>
+                  <TableCell>{(user.address && user.address.length > 0 && user.address[0].fullName) || 'N/A'}</TableCell>
                   <TableCell>{user.phoneNumber}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.cartItem?.length || 0}</TableCell>
+                  <TableCell>{(user.address && user.address.length > 0 && user.address[0].city)},
+                  {(user.address && user.address.length > 0 && user.address[0].addressLine)},
+                  {(user.address && user.address.length > 0 && user.address[0].pinCode)}
+                  </TableCell>
                 </TableRow>
               ))
             ) : (

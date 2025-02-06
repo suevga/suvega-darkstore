@@ -5,7 +5,14 @@ const useOrderStore = create(
   persist(
     (set, get) => ({
       orders: [],
-      setOrders: (orders) => set({ orders }),
+      setOrders: (orders) => {
+        // Ensure we're always setting an array
+        const orderArray = Array.isArray(orders) ? orders : [];
+        set({ 
+          orders: orderArray,
+          totalOrderCount: orderArray.length 
+        });
+      },
       totalOrderCount: 0,
       setTotalOrderCount: (count) => set({ totalOrderCount: count }),
       
@@ -26,10 +33,14 @@ const useOrderStore = create(
       
       // Delete order
       deleteOrder: (orderId) =>
-        set((state) => ({
-          orders: state.orders.filter((order) => order._id !== orderId),
-          totalOrderCount: state.totalOrderCount - 1
-        })),
+        set((state) => {
+          const newOrders = state.orders.filter((order) => order._id !== orderId);
+          return {
+            orders: newOrders,
+            totalOrderCount: newOrders.length
+          };
+      }),
+
 
       // Get orders by status
       getOrdersByStatus: (status) => {
