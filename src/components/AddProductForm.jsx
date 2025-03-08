@@ -47,8 +47,8 @@ export function AddProductForm({ onClose, onSuccess }) {
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files || [])
     const newImages = files.filter(file => 
-      ['image/jpeg', 'image/png', 'image/webp'].includes(file.type) &&
-      file.size <= 5000000
+      ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/svg'].includes(file.type) &&
+      file.size <= 1000000 // 1MB
     )
 
     const limitedImages = newImages.slice(0, 5 - productImages.length)

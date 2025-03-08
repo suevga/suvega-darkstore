@@ -6,14 +6,21 @@ import { useClerk } from '@clerk/clerk-react'
 import { useGoogleLocation } from '../hooks/useLocation.js'
 import { LocationError } from './LocationError.jsx'
 import { cn } from '../lib/utils.ts';
+import { useUserStore } from '../store/allUsersStore.js'
+import { useDarkStore } from '../store/darkStore.js'
+import { useCategoryStore } from '../store/categoryStore.js'
+import { useProductStore } from '../store/productStore.js'
 
 export const Layout = ()=> {
   const [collapsed, setCollapsed] = useState(false);
   const locationPath = useLocation()
   const navigate = useNavigate()
   const { signOut } = useClerk()
-  const { error, requestLocation, loading } = useGoogleLocation()
-
+  const { error, requestLocation } = useGoogleLocation()
+  const { clearUsers } = useUserStore();
+  const { resetDarkstore } = useDarkStore();
+  const { clearCategories } = useCategoryStore();
+  const { clearProducts } = useProductStore();
   const menuItems = [
     { icon: BarChart, label: 'Dashboard', href: '/dashboard' },
     {icon: User, label: 'All Users', href: '/dashboard/users'},
@@ -26,7 +33,12 @@ export const Layout = ()=> {
 
   const handleSignOut = async () => {
     try {
-      await signOut()
+      await signOut();
+      clearUsers();
+      resetDarkstore();
+      clearCategories();
+      clearProducts();
+      
       navigate('/login', { replace: true })
     } catch (error) {
       console.error('Error signing out:', error)

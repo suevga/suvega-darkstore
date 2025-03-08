@@ -5,7 +5,8 @@ export const useUserStore = create(
   persist(
     (set)=> ({
       users: [],
-      setUsers: (users)=> set({users})
+      setUsers: (users)=> set({users}),
+      clearUsers: () => set({users: []})
     }),
     {
       name: "user-store"

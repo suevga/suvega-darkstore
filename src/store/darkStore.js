@@ -16,6 +16,7 @@ export const useDarkStore = create(
       setDarkstoreDetails: (details) => set({ darkstoreDetails: details }),
       setDarkstoreId: (id) => set({ darkstoreId: id }),
       setFcmToken: (token) => set({ fcmToken: token }),
+      resetDarkstore: ()=> set({darkstoreId: null, darkstoreDetails: {}, darkstoreRegistered: false, registrationPending: false, fcmToken: null}) 
     }),
     {
       name: 'store-storage', // name of the item in the storage (must be unique)

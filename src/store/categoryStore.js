@@ -7,7 +7,8 @@ export const useCategoryStore = create(
             categories: [],
             setCategories: (categories) => set({ categories }),
             totalCategoryCount: 0,
-            setTotalCategoryCount: (count) => set({ totalCategoryCount: count })
+            setTotalCategoryCount: (count) => set({ totalCategoryCount: count }),
+            clearCategories: () => set({ categories: [] }),
         }),
         {
            name: "category-store" 

@@ -2,8 +2,8 @@ import axios from 'axios';
 import { envConfig } from '../utility/env.config.js';
 
 const axiosInstance = axios.create({
-  baseURL: envConfig.backendUrl,
-  // baseURL: 'http://localhost:8080',
+  // baseURL: envConfig.backendUrl,
+  baseURL: 'http://localhost:8080',
   headers: {
     'Content-Type': 'application/json',
   },

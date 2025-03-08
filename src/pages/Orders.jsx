@@ -113,9 +113,7 @@ const OrdersPage = () => {
     try {
       setLoading(prev => ({ ...prev, action: true }));
       const response = await axiosInstance.delete(`/api/v1/order/delete-order/${orderId}`);
-      
-      console.log("response after delete order::", JSON.stringify(response));
-      
+          
       if (response.status === 200) {
         deleteOrder(orderId);
         toast({
@@ -260,14 +258,19 @@ const OrdersPage = () => {
   };
 
   const getUserName = (userId) => {
-    const user = users.find(user => user._id === userId._id);
+    if (!userId || !userId._id) return 'Unknown User';
+  console.log("userId ahise from getUserMethod::", userId);
+    const extractId = userId._id;
+    const user = users.find(user => user._id === extractId);
     if (!user || !user.address || !user.address.length) return 'Unknown User';
     const primaryAddress = user.address[0];
     return primaryAddress.fullName || 'Unknown User';
   };
-
+  
   const getUserAddress = (userId) => {
-    const user = users.find(user => user._id === userId._id);
+    if (!userId || !userId._id) return 'Unknown Address';
+    const extractId = userId._id;
+    const user = users.find(user => user._id === extractId);
     if (!user || !user.address || !user.address.length) return 'Unknown Address';
     const primaryAddress = user.address[0];
     return `${primaryAddress.addressLine}, ${primaryAddress.city}, ${primaryAddress.pinCode}, ${primaryAddress.landmark ? primaryAddress.landmark:" "}`;
@@ -310,7 +313,8 @@ const OrdersPage = () => {
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
-
+ 
+  
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
