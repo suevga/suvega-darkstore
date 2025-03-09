@@ -18,8 +18,11 @@ export const useGoogleLocation = () => {
         }
       });
 
+      console.log("response from google location::", response);
+      
       const data = await response.json();
-
+      console.log("data from google location::", data.location);
+      
       if (data.location) {
         setLocation(data.location.lat, data.location.lng);
         setError(null);

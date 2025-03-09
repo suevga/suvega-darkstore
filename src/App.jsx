@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { 
   ClerkProvider, 
   SignedIn, 
@@ -25,12 +25,12 @@ import RidersPage from './pages/Riders.jsx';
 import ProfilePage from './pages/Profile.jsx'
 import AllusersPage from './pages/Allusers.jsx';
 import { RegistrationVerification } from './components/RegisterInBackend.jsx';
+import { useGoogleLocation } from './hooks/useLocation.js';
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
-
 const ProtectedRoute = ({ children }) => {
-
+  
   return (
     <>
       <SignedIn>
@@ -57,6 +57,14 @@ const PublicRoute = ({ children }) => {
 };
 
 function App() {
+  const { latitude, longitude, requestLocation } = useGoogleLocation();
+  console.log("latitude in app.js::", latitude);
+  console.log("longitude in app.js::", longitude);
+  
+  useEffect(() => {
+    requestLocation();
+  }, []);
+
   return (
     <ClerkProvider publishableKey={clerkPubKey}>
       <Router>
