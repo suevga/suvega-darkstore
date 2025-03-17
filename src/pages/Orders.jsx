@@ -23,7 +23,6 @@ import { Badge } from "../components/ui/badge";
 import useOrderStore from '../store/orderStore.js';
 import { useDarkStore } from '../store/darkStore.js';
 import { NotificationCenter } from '../components/NotificationCenter';
-import SocketService from "../utility/socket.service.js";
 import { useProductStore } from "../store/productStore.js";
 import { Button } from '../components/ui/button';
 import { toast } from '../hooks/use-toast';
@@ -50,38 +49,6 @@ const OrdersPage = () => {
   const { products } = useProductStore();
   const { darkstoreId } = useDarkStore();
   const { users } = useUserStore();
-  
-  useEffect(() => {
-    let isSubscribed = true;
-    let socketService;
-    
-    const initializeOrdersAndSocket = async () => {
-      if (!darkstoreId) return;
-
-      try {
-        await fetchOrders(currentPage);
-        socketService = SocketService.getInstance();
-        socketService.connect(darkstoreId);
-
-        if (Array.isArray(orders)) {
-          orders.forEach(order => {
-            socketService.joinOrderRoom(order._id);
-          });
-        }
-      } catch (error) {
-        console.error('Error initializing orders and socket:', error);
-      }
-    };
-
-    initializeOrdersAndSocket();
-
-    return () => {
-      isSubscribed = false;
-      if (socketService) {
-        socketService.disconnect();
-      }
-    };
-  }, [darkstoreId, currentPage]); 
 
   const fetchOrders = async (page) => {
     if (!darkstoreId) return;
@@ -180,10 +147,15 @@ const OrdersPage = () => {
 
   const handleAcceptOrder = async (orderId) => {
     try {
+      console.log('Accepting order:', orderId);
+      
       setLoading(prev => ({ ...prev, action: true }));
       const response = await axiosInstance.patch(`/api/v1/order/store-response/${orderId}`, {
         accept: true,
       });
+
+      console.log("response after accepting order", response);
+      
       if (response.status === 200) {
         await fetchOrders(currentPage);
         const updatedOrder = { 
@@ -212,6 +184,7 @@ const OrdersPage = () => {
 
   const handleRejectOrder = async (orderId) => {
     try {
+      
       setLoading(prev => ({ ...prev, action: true }));
       const response = await axiosInstance.patch(`/api/v1/order/store-response/${orderId}`, {
         accept: false
@@ -259,7 +232,6 @@ const OrdersPage = () => {
 
   const getUserName = (userId) => {
     if (!userId || !userId._id) return 'Unknown User';
-  console.log("userId ahise from getUserMethod::", userId);
     const extractId = userId._id;
     const user = users.find(user => user._id === extractId);
     if (!user || !user.address || !user.address.length) return 'Unknown User';
@@ -314,6 +286,9 @@ const OrdersPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
  
+  useEffect(() => {
+    fetchOrders(currentPage);
+  }, [currentPage]);
   
   return (
     <div className="container mx-auto py-10">

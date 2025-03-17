@@ -53,9 +53,10 @@ const useOrderStore = create(
         const state = get();
         return state.orders.reduce((acc, order) => {
           if (order.orderStatus === 'delivered') acc.delivered++;
+          if (order.orderStatus === 'rejected') acc.rejected++;
           if (order.orderStatus === 'cancelled') acc.cancelled++;
           return acc;
-        }, { delivered: 0, cancelled: 0 });
+        }, { delivered: 0,rejected: 0, cancelled: 0 });
       },
 
       // Clear orders
