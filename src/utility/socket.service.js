@@ -1,4 +1,3 @@
-// socket.service.js (Darkstore Admin)
 import { io } from "socket.io-client";
 import useOrderStore from '../store/orderStore.js';
 import { toast } from "../hooks/use-toast";
@@ -68,8 +67,7 @@ class SocketService {
       console.log("Successfully joined room:", data.room);
       toast({
         title: "Connected",
-        description: `Connected to ${data.room}`,
-        duration: 3000,
+        description: `Connected to ${data.room}`
       });
     });
 
@@ -122,9 +120,7 @@ class SocketService {
         
         toast({
           title: "New Order Received",
-          description: `Order ID: ${data.orderId}`,
-          variant: "default",
-          duration: 5000,
+          description: `Order ID: ${data.orderId}`
         });
         
         if (data.orderId) {
@@ -154,7 +150,6 @@ class SocketService {
         toast({
           title: "Order Updated",
           description: data.message || `Order ${data.orderId} was updated`,
-          duration: 3000,
         });
       }
     });
@@ -174,7 +169,6 @@ class SocketService {
       toast({
         title: "Admin Notification",
         description: data.message,
-        duration: 5000,
       });
     });
 
@@ -196,10 +190,11 @@ class SocketService {
   async fetchAndAddOrder(orderId) {
     try {
       console.log("Fetching order details for:", orderId);
-      const response = await axiosInstance.get(`/api/v1/order/${orderId}`);
+      const response = await axiosInstance.get(`/api/v1/order/details/${orderId}`);
       
       // Check if the response is already JSON
-      const data = typeof response.data === 'object' ? response.data : await response.json();
+      const data = response.data;
+      console.log("log after fetching order", data);
       
       if (data.success || data.statusCode === 200) {
         const { addOrder } = useOrderStore.getState();
@@ -211,7 +206,6 @@ class SocketService {
         toast({
           title: "New Order Added",
           description: `Order #${orderData._id.slice(-6)} has been added to your list`,
-          duration: 3000,
         });
       } else {
         console.error("Error response from API:", data);

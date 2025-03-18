@@ -28,6 +28,7 @@ import { Button } from '../components/ui/button';
 import { toast } from '../hooks/use-toast';
 import { useUserStore } from '../store/allUsersStore.js';
 import { Pagination } from '../components/ui/pagination.tsx';
+import SocketService from '../utility/socket.service.js';
 
 const OrdersPage = () => {
   const [loading, setLoading] = useState({
@@ -76,6 +77,14 @@ const OrdersPage = () => {
     }
   };
 
+  useEffect(()=> {
+    if (!darkstoreId) {
+      console.log("darkstoreId not found::");
+      return;
+    }
+    const socketService = SocketService.getInstance();
+    socketService.connect(darkstoreId); // Connect to the socket server
+  },[])
   const handleOrderDelete = async (orderId) => {
     try {
       setLoading(prev => ({ ...prev, action: true }));
