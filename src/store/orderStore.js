@@ -16,10 +16,10 @@ const useOrderStore = create(
       totalOrderCount: 0,
       setTotalOrderCount: (count) => set({ totalOrderCount: count }),
       
-      // Add order
+      // Add order - modified to add new orders at the beginning
       addOrder: (order) => 
         set((state) => ({ 
-          orders: [...state.orders, order],
+          orders: [order, ...state.orders],
           totalOrderCount: state.totalOrderCount + 1
         })),
       

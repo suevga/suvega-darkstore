@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axiosInstance from "../api/axiosInstance.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -17,13 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 
-import { ShoppingBag, CheckCircle, XCircle, Loader2, Trash2, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ShoppingBag, CheckCircle, XCircle, Loader2, Trash2, ChevronRight, ChevronLeft, Bell, Clock } from 'lucide-react';
 import { Badge } from "../components/ui/badge";
 import useOrderStore from '../store/orderStore.js';
 import { useDarkStore } from '../store/darkStore.js';
 import { NotificationCenter } from '../components/NotificationCenter';
-import { useProductStore } from "../store/productStore.js";
 import { Button } from '../components/ui/button';
 import { toast } from '../hooks/use-toast';
 import { useUserStore } from '../store/allUsersStore.js';
@@ -33,11 +33,17 @@ import SocketService from '../utility/socket.service.js';
 const OrdersPage = () => {
   const [loading, setLoading] = useState({
     page: true,
-    action: false
+    action: false,
+    products: false
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [orderProducts, setOrderProducts] = useState({});
+  const [activeTab, setActiveTab] = useState("pending");
+  const [hasNewNotification, setHasNewNotification] = useState(false);
+  const audioRef = useRef(null);
+  
   const { 
     orders, 
     setOrders, 
@@ -45,23 +51,144 @@ const OrdersPage = () => {
     setTotalOrderCount, 
     updateOrder,
     getOrderCounts,
-    deleteOrder 
+    deleteOrder,
+    addOrder,
+    getOrdersByStatus
   } = useOrderStore();
-  const { products } = useProductStore();
   const { darkstoreId } = useDarkStore();
   const { users } = useUserStore();
-
-  const fetchOrders = async (page) => {
-    if (!darkstoreId) return;
+  const [socketInitialized, setSocketInitialized] = useState(false);
+  
+  // Function to play notification sound
+  const playNotificationSound = () => {
+    try {
+      console.log("Attempting to play notification sound");
+      if (audioRef.current) {
+        // Reset the audio to the beginning
+        audioRef.current.currentTime = 0;
+        
+        // Create a user interaction context by handling it within a user action
+        const playPromise = audioRef.current.play();
+        
+        // Handle play() promise to catch any errors
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log("Notification sound played successfully");
+          }).catch(error => {
+            console.error("Error playing notification sound:", error.message);
+            // Try alternative approach if autoplay was prevented
+            if (error.name === "NotAllowedError") {
+              console.log("Autoplay prevented. Sound will only play after user interaction.");
+            }
+          });
+        }
+      } else {
+        console.error("Audio element reference not found");
+      }
+    } catch (err) {
+      console.error("Error attempting to play sound:", err);
+    }
+  };
+  
+  // Socket connection setup
+  useEffect(() => {
+    if (!darkstoreId) {
+      console.log("darkstoreId not found, can't initialize socket");
+      return;
+    }
     
     try {
+      const socketService = SocketService.getInstance();
+      socketService.connect(darkstoreId);
+      setSocketInitialized(true);
+      
+      // Verify we're connected to the socket server
+      console.log("Socket connected status:", socketService.socket?.connected);
+      
+      // Listen for new orders with the exact events backend is sending
+      const newOrderEvents = ["newOrderRequest", "NEW_ORDER_REQUEST", "newOrder", "globalNewOrder"];
+      
+      newOrderEvents.forEach(eventName => {
+        socketService.socket?.on(eventName, (newOrder) => {
+          console.log(`New order received via socket [${eventName}]:`, newOrder);
+          
+          // No need to trigger a full refresh - let the socket service handle adding the order
+          // Only refresh the UI once the socket service has updated the store
+          setTimeout(() => {
+            console.log("Refreshing UI after socket update");
+            // A way to trigger rerender without full fetch
+            setSearchTerm(searchTerm => searchTerm);
+          }, 500);
+          
+          // Set notification indicator and play sound
+          setHasNewNotification(true);
+          playNotificationSound();
+          
+          toast({
+            title: "New Order",
+            description: `New order received: ${newOrder._id || (newOrder.orderId || 'Unknown')}`,
+            variant: "info",
+          });
+        });
+      });
+      
+      // If the socket is not connected, try to reconnect every 5 seconds
+      const interval = setInterval(() => {
+        if (!socketService.socket?.connected) {
+          console.log("Socket not connected, attempting to reconnect...");
+          socketService.disconnect();
+          socketService.connect(darkstoreId);
+        }
+      }, 5000);
+      
+      return () => {
+        clearInterval(interval);
+        // Cleanup socket event listeners
+        newOrderEvents.forEach(eventName => {
+          socketService.socket?.off(eventName);
+        });
+        // Keep socket connected when navigating away, don't disconnect
+      };
+    } catch (error) {
+      console.error("Socket initialization error:", error);
+    }
+  }, [darkstoreId]);
+
+  const fetchOrders = async (page) => {
+    if (!darkstoreId) {
+      console.log("darkstoreId not found, can't fetch orders");
+      return;
+    }
+    
+    setLoading(prev => ({ ...prev, page: true }));
+    
+    try {
+      console.log(`Fetching orders for darkstore ${darkstoreId}, page ${page}`);
       const response = await axiosInstance.get(`/api/v1/order/allorders/${darkstoreId}?page=${page}&limit=10`);
 
       if (response.status === 200 && response.data?.data?.orders) {
         const fetchedOrders = response.data.data.orders;
-        setOrders(Array.isArray(fetchedOrders) ? fetchedOrders : []);
-        setTotalOrderCount(response.data.data.totalOrders);
-        setTotalPages(response.data.data.totalPages);
+        
+        // Sort orders by createdAt date (newest first)
+        const sortedOrders = Array.isArray(fetchedOrders) 
+          ? [...fetchedOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          : [];
+          
+        setOrders(sortedOrders);
+        setTotalOrderCount(response.data.data.totalOrders || 0);
+        setTotalPages(response.data.data.totalPages || 1);
+        
+        console.log(`Fetched ${fetchedOrders.length} orders`);
+        
+        // Fetch product details for these orders
+        await fetchOrderProducts(sortedOrders);
+      } else {
+        console.warn("Unexpected response format:", response.data);
+        toast({
+          title: "Warning",
+          description: "Received unexpected data format from server",
+          variant: "warning",
+        });
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -76,15 +203,59 @@ const OrdersPage = () => {
       setLoading(prev => ({ ...prev, page: false }));
     }
   };
-
-  useEffect(()=> {
-    if (!darkstoreId) {
-      console.log("darkstoreId not found::");
-      return;
+  
+  const fetchOrderProducts = async (fetchedOrders) => {
+    if (!fetchedOrders || !fetchedOrders.length) return;
+    
+    try {
+      setLoading(prev => ({ ...prev, products: true }));
+      
+      // Collect all product IDs from all orders
+      const productIds = new Set();
+      fetchedOrders.forEach(order => {
+        if (order.items && Array.isArray(order.items)) {
+          order.items.forEach(item => {
+            if (item.product) productIds.add(item.product);
+          });
+        }
+      });
+      
+      // Fetch products in bulk
+      if (productIds.size > 0) {
+        const productIdsArray = Array.from(productIds);
+        console.log(`Fetching details for ${productIdsArray.length} products`);
+        
+        const response = await axiosInstance.post('/api/v1/product/get-products-by-ids', {
+          productIds: productIdsArray
+        });
+        
+        if (response.status === 200 && response.data?.data) {
+          const productsData = response.data.data;
+          const productMap = {};
+          
+          // Create a map for quick lookup
+          productsData.forEach(product => {
+            productMap[product._id] = product;
+          });
+          
+          setOrderProducts(productMap);
+          console.log(`Loaded details for ${productsData.length} products`);
+        } else {
+          console.warn("Unexpected product response format:", response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching order products:', error);
+      toast({
+        title: "Warning",
+        description: "Could not load all product details",
+        variant: "warning",
+      });
+    } finally {
+      setLoading(prev => ({ ...prev, products: false }));
     }
-    const socketService = SocketService.getInstance();
-    socketService.connect(darkstoreId); // Connect to the socket server
-  },[])
+  };
+  
   const handleOrderDelete = async (orderId) => {
     try {
       setLoading(prev => ({ ...prev, action: true }));
@@ -114,7 +285,7 @@ const OrdersPage = () => {
     if (!items || !Array.isArray(items)) return 'N/A';
     
     return items.map(item => {
-      const product = products.find(product => product._id === item.product);
+      const product = orderProducts[item.product];
       if (product) {
         return `${product.productName} (${item.quantity}x)`;
       }
@@ -166,7 +337,6 @@ const OrdersPage = () => {
       console.log("response after accepting order", response);
       
       if (response.status === 200) {
-        await fetchOrders(currentPage);
         const updatedOrder = { 
           ...orders.find(o => o._id === orderId),
           orderStatus: 'accepted'
@@ -178,6 +348,9 @@ const OrdersPage = () => {
           description: "Order has been accepted successfully.",
           variant: "success",
         });
+        
+        // Refresh the orders list to get the latest status
+        await fetchOrders(currentPage);
       }
     } catch (error) {
       console.error('Error accepting order:', error);
@@ -257,10 +430,30 @@ const OrdersPage = () => {
     return `${primaryAddress.addressLine}, ${primaryAddress.city}, ${primaryAddress.pinCode}, ${primaryAddress.landmark ? primaryAddress.landmark:" "}`;
   };
 
+  const getOrderData = (status) => {
+    // Filter orders based on status
+    return orders.filter(order => {
+      if (status === "pending") {
+        return order.orderStatus === "pending";
+      } else if (status === "processing") {
+        return ["accepted", "pickup"].includes(order.orderStatus);
+      } else if (status === "delivered") {
+        return order.orderStatus === "delivered";
+      } else if (status === "cancelled") {
+        return order.orderStatus === "cancelled" || order.orderStatus === "rejected";
+      }
+      return true;
+    });
+  };
+
   const filteredOrders = React.useMemo(() => {
     if (!Array.isArray(orders)) return [];
     
-    return orders.filter(order => {
+    // First filter by tab/status
+    const statusFiltered = getOrderData(activeTab);
+    
+    // Then filter by search term
+    return statusFiltered.filter(order => {
       const searchLower = searchTerm.toLowerCase();
      
       return (
@@ -269,7 +462,7 @@ const OrdersPage = () => {
         (order.deliveryRider?.name || '').toLowerCase().includes(searchLower)
       );
     });
-  }, [orders, searchTerm]);
+  }, [orders, searchTerm, users, activeTab]);
 
   const { delivered: deliveredOrders, cancelled: cancelledOrders } = getOrderCounts();
 
@@ -294,19 +487,47 @@ const OrdersPage = () => {
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
+
+  const handleRefresh = () => {
+    fetchOrders(currentPage);
+  };
  
   useEffect(() => {
     fetchOrders(currentPage);
-  }, [currentPage]);
+  }, [currentPage, darkstoreId]);
   
+  // Clear notification indicator when opening notification center
+  const handleNotificationClick = () => {
+    setHasNewNotification(false);
+  };
+
   return (
     <div className="container mx-auto py-10">
+      <audio 
+        ref={audioRef} 
+        src="/notification.mp3" 
+        preload="auto"
+      />
+      
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Orders Management</h1>
-        <NotificationCenter />
+        <div className="flex items-center space-x-4">
+          <Button onClick={handleRefresh} variant="outline" size="sm">
+            Refresh Orders
+          </Button>
+          {/* Add a test button for sound in development */}
+          <div className="relative">
+            {hasNewNotification && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+            )}
+            <div onClick={handleNotificationClick}>
+              <NotificationCenter />
+            </div>
+          </div>
+        </div>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
@@ -318,11 +539,39 @@ const OrdersPage = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+            <div className="relative">
+              <Bell className="h-4 w-4 text-muted-foreground" />
+              {getOrderData("pending").length > 0 && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{getOrderData("pending").length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Processing Orders</CardTitle>
+            <div className="relative">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              {getOrderData("accepted").length > 0 && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full"></div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{getOrderData("accepted").length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Delivered Orders</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{deliveredOrders}</div>
+            <div className="text-2xl font-bold">{getOrderData("delivered").length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -331,7 +580,7 @@ const OrdersPage = () => {
             <XCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{cancelledOrders}</div>
+            <div className="text-2xl font-bold">{getOrderData("cancelled").length}</div>
           </CardContent>
         </Card>
       </div>
@@ -345,90 +594,135 @@ const OrdersPage = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order Time</TableHead>
-              <TableHead>Customer Name</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Products</TableHead>
-              <TableHead>Total Price</TableHead>
-              <TableHead>Rider</TableHead>
-              <TableHead>Order Status</TableHead>
-              <TableHead>Payment Method</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
 
-          <TableBody>
-            {filteredOrders.map((order) => (
-              <TableRow key={order._id}>
-                <TableCell>{formatDate(order.createdAt)}</TableCell>
-                <TableCell>{getUserName(order.userId)}</TableCell>
-                <TableCell>{getUserAddress(order.userId)}</TableCell>
-                <TableCell>{getProductNames(order.items)}</TableCell>
-                <TableCell>₹{order.totalPrice}</TableCell>
-                <TableCell>{order.deliveryRider?.name || 'Not Assigned'}</TableCell>
-                <TableCell>
-                  {order.orderStatus === 'pending' ? (
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={() => handleAcceptOrder(order._id)}
-                        disabled={loading.action}
-                        size="sm"
-                      >
-                        Accept
-                      </Button>
-                      <Button 
-                        onClick={() => handleRejectOrder(order._id)}
-                        variant="destructive"
-                        disabled={loading.action}
-                        size="sm"
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  ) : (
-                    <Select
-                      value={order.orderStatus}
-                      onValueChange={(value) => handleStatusChange(order._id, value)}
-                      disabled={!['pickup'].includes(order.orderStatus)}
-                    >
-                      <SelectTrigger className="w-[130px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pickup">Pickup</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </TableCell>
-                <TableCell>{order.paymentMethod}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {loading.action ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOrderDelete(order._id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-between px-2">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid grid-cols-4 mb-4">
+          <TabsTrigger value="pending" className="relative">
+            Pending
+            {getOrderData("pending").length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                {getOrderData("pending").length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="accepted" className="relative">
+            Processing
+            {getOrderData("accepted").length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
+                {getOrderData("accepted").length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="delivered">Delivered</TabsTrigger>
+          <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+        </TabsList>
+        
+        <div className="rounded-md border">
+          {loading.page || loading.products ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin mr-2" />
+              <p>Loading orders...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order Time</TableHead>
+                  <TableHead>Customer Name</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Products</TableHead>
+                  <TableHead>Total Price</TableHead>
+                  <TableHead>Rider</TableHead>
+                  <TableHead>Order Status</TableHead>
+                  <TableHead>Payment Method</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {filteredOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8">
+                      No {activeTab} orders found. 
+                      {!socketInitialized && (
+                        <div className="mt-2 text-sm text-yellow-600">
+                          Socket not connected. Notifications may not work.
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredOrders.map((order) => (
+                    <TableRow key={order._id}>
+                      <TableCell>{formatDate(order.createdAt)}</TableCell>
+                      <TableCell>{getUserName(order.userId)}</TableCell>
+                      <TableCell>{getUserAddress(order.userId)}</TableCell>
+                      <TableCell>{getProductNames(order.items)}</TableCell>
+                      <TableCell>₹{order.totalPrice}</TableCell>
+                      <TableCell>{order.deliveryRider?.name || 'Not Assigned'}</TableCell>
+                      <TableCell>
+                        {order.orderStatus === 'pending' ? (
+                          <div className="flex gap-2">
+                            <Button 
+                              onClick={() => handleAcceptOrder(order._id)}
+                              disabled={loading.action}
+                              size="sm"
+                            >
+                              Accept
+                            </Button>
+                            <Button 
+                              onClick={() => handleRejectOrder(order._id)}
+                              variant="destructive"
+                              disabled={loading.action}
+                              size="sm"
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select
+                            value={order.orderStatus}
+                            onValueChange={(value) => handleStatusChange(order._id, value)}
+                            disabled={!['pickup'].includes(order.orderStatus)}
+                          >
+                            <SelectTrigger className="w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pickup">Pickup</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </TableCell>
+                      <TableCell>{order.paymentMethod}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {loading.action ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOrderDelete(order._id)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      </Tabs>
+
+      <div className="flex items-center justify-between px-2 mt-4">
         <div className="text-sm text-gray-500">
           Page {currentPage} of {totalPages}
         </div>

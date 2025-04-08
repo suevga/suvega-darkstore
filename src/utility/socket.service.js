@@ -52,6 +52,9 @@ class SocketService {
       // Debug: Check socket connection status
       console.log("Socket connected:", this.socket.connected);
       console.log("Active transport:", this.socket.io.engine.transport.name);
+      
+      // Notify the server we're ready to receive updates
+      this.socket.emit('darkStoreReady', { darkStoreId });
     });
 
     this.socket.on("connect_error", (error) => {
@@ -111,8 +114,17 @@ class SocketService {
       console.log(`Event received [${eventName}]:`, data);
     };
 
+    // Clear any existing listeners to prevent duplicates
+    this.socket.off("newOrderRequest");
+    this.socket.off("NEW_ORDER_REQUEST");
+    this.socket.off("newOrder");
+    this.socket.off("globalNewOrder");
+    this.socket.off("orderUpdate");
+    this.socket.off("riderLocationUpdate");
+    this.socket.off("adminNotification");
+
     // Listen for new orders with all possible event names
-    const newOrderEvents = ["newOrderRequest", "NEW_ORDER_REQUEST", "newOrder"];
+    const newOrderEvents = ["newOrderRequest", "NEW_ORDER_REQUEST", "newOrder", "globalNewOrder"];
     
     newOrderEvents.forEach(eventName => {
       this.socket.on(eventName, (data) => {
@@ -120,15 +132,16 @@ class SocketService {
         
         toast({
           title: "New Order Received",
-          description: `Order ID: ${data.orderId}`
+          description: `Order ID: ${data.orderId || (data.order?._id || 'Unknown')}`
         });
         
-        if (data.orderId) {
+        const orderId = data.orderId || (data.order?._id);
+        if (orderId) {
           // Join the new order's room
-          this.joinOrderRoom(data.orderId);
+          this.joinOrderRoom(orderId);
           
           // Fetch and add the new order
-          this.fetchAndAddOrder(data.orderId);
+          this.fetchAndAddOrder(orderId);
         }
       });
     });
@@ -143,9 +156,31 @@ class SocketService {
         
         if (data.status) {
           updateData.orderStatus = data.status;
+        } else if (data.type) {
+          // Handle different types of order updates
+          switch (data.type) {
+            case 'ORDER_ACCEPTED':
+              updateData.orderStatus = 'accepted';
+              break;
+            case 'ORDER_REJECTED':
+              updateData.orderStatus = 'rejected';
+              break;
+            case 'RIDER_ASSIGNED':
+              updateData.orderStatus = 'rider_pending';
+              updateData.deliveryRider = data.rider;
+              break;
+            case 'PICKUP': 
+              updateData.orderStatus = 'pickup';
+              break;
+            case 'DELIVERED':
+              updateData.orderStatus = 'delivered';
+              break;
+          }
         }
         
-        updateOrder(data.orderId, updateData);
+        if (Object.keys(updateData).length > 0) {
+          updateOrder(data.orderId, updateData);
+        }
         
         toast({
           title: "Order Updated",
@@ -197,16 +232,24 @@ class SocketService {
       console.log("log after fetching order", data);
       
       if (data.success || data.statusCode === 200) {
-        const { addOrder } = useOrderStore.getState();
+        const { addOrder, setOrders, orders } = useOrderStore.getState();
         const orderData = data.data?.order || data.data;
         console.log("Adding order to store:", orderData);
-        addOrder(orderData);
         
-        // Show a toast notification for the fetched order
-        toast({
-          title: "New Order Added",
-          description: `Order #${orderData._id.slice(-6)} has been added to your list`,
-        });
+        // Check if order already exists to avoid duplicates
+        const existingOrder = orders.find(o => o._id === orderData._id);
+        if (!existingOrder) {
+          addOrder(orderData);
+          
+          // Show a toast notification for the fetched order
+          toast({
+            title: "New Order Added",
+            description: `Order #${orderData._id.slice(-6)} has been added to your list`,
+          });
+        } else {
+          console.log("Order already exists in store, updating instead");
+          setOrders([...orders.filter(o => o._id !== orderData._id), orderData]);
+        }
       } else {
         console.error("Error response from API:", data);
         toast({

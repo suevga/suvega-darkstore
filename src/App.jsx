@@ -24,6 +24,8 @@ import CategoryPage from './pages/Category.jsx';
 import RidersPage from './pages/Riders.jsx';
 import ProfilePage from './pages/Profile.jsx'
 import AllusersPage from './pages/Allusers.jsx';
+import InventoryPage from './pages/Inventory.jsx';
+
 import { RegistrationVerification } from './components/RegisterInBackend.jsx';
 import { useGoogleLocation } from './hooks/useLocation.js';
 
@@ -104,6 +106,7 @@ function App() {
             <Route path="banners" element={<BannerPage />} />
             <Route path="categories" element={<CategoryPage />} />
             <Route path="riders" element={<RidersPage />} />
+            <Route path='inventory' element={<InventoryPage/>}/>
             <Route path="profile" element={<ProfilePage />} />
           </Route>
 

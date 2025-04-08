@@ -6,11 +6,13 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Toolti
 import { useCategoryStore } from "../store/categoryStore.js";
 import { useProductStore } from "../store/productStore.js";
 import  useOrderStore from "../store/orderStore.js";
+import { useDarkStore } from '../store/darkStore.js';
 
 export default function DashboardPage() {
   const { totalCategoryCount } = useCategoryStore();
   const { totalProducts } = useProductStore()
   const { totalOrderCount } = useOrderStore();
+  const { totalRevenue } = useDarkStore();
 
   // Sample data for average order value
 const avgOrderData = [
@@ -25,7 +27,7 @@ const avgOrderData = [
   const stats = [
     { 
       title: 'Total Revenue', 
-      value: '12,345,000', 
+      value: `${totalRevenue}`, 
       icon: IndianRupeeIcon,
       href: '/dashboard' 
     },

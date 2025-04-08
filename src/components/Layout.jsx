@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom'
-import { BarChart, ShoppingCart, User, LogOut, ChevronRight, ChevronLeft, User2Icon, Package2, Box, Bike, Image } from 'lucide-react'
+import { BarChart, ShoppingCart, User, LogOut, ChevronRight, ChevronLeft, User2Icon, Package2, Box, Bike, Image, BoxesIcon } from 'lucide-react'
 import { Button } from './ui/button'
 import { useClerk } from '@clerk/clerk-react'
 import { useGoogleLocation } from '../hooks/useLocation.js'
@@ -26,8 +26,9 @@ export const Layout = ()=> {
     {icon: User, label: 'All Users', href: '/dashboard/users'},
     { icon: ShoppingCart, label: 'Orders', href: '/dashboard/orders'},
     {icon: Package2, label: 'Products', href: '/dashboard/products'},
-    {icon: Box, label: 'categories', href: '/dashboard/categories'},
+    {icon: Box, label: 'Categories', href: '/dashboard/categories'},
     {icon: Bike, label: 'Riders', href: '/dashboard/riders'},
+    {icon: BoxesIcon, label: "Inventory", href: "/dashboard/inventory"},
     { icon: Image, label: 'Banner', href: '/dashboard/banners' },
   ]
 

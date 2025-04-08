@@ -11,6 +11,7 @@ import axiosInstance from '../api/axiosInstance.js';
 export const RegistrationVerification = ({ children }) => {
   const { user, isLoaded } = useUser();
   const { latitude, longitude, error: locationError, requestLocation, loading } = useGoogleLocation();
+ 
   const {
     darkstoreRegistered,
     registrationPending,
@@ -18,10 +19,9 @@ export const RegistrationVerification = ({ children }) => {
     setIsNewUser,
     setRegistrationPending,
     setDarkstoreId,
+    setDarkstoreDetails
   } = useDarkStore();
 
-  console.log("latitude in register backend page::", latitude);
-  console.log("longitude in register backend page::", longitude);
   
   const [verificationError, setVerificationError] = useState(null);
 
@@ -34,11 +34,12 @@ export const RegistrationVerification = ({ children }) => {
           storename: user.username,
           email: user.primaryEmailAddress.emailAddress
         });
-        console.log("response from backend in register page::", JSON.stringify(response));
+        console.log("response from backend in register page::", JSON.stringify(response.data));
         
         if (response.data.data.isRegistered) {
           setDarkstoreId(response.data.data.storeDetails._id);
           setDarkstoreRegistered(true);
+          setDarkstoreDetails(response.data.data.storeDetails);
           setIsNewUser(false);
         } else {
           setDarkstoreRegistered(false);
@@ -71,7 +72,7 @@ export const RegistrationVerification = ({ children }) => {
         location: { latitude, longitude }
       });
 
-      console.log("response after sucessfull register::", JSON.stringify(response));
+      console.log("response after sucessfull register::", JSON.stringify(response.data));
       
       if (response.data?.data) {
         setDarkstoreId(response.data.data._id);

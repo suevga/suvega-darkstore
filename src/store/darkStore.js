@@ -9,11 +9,13 @@ export const useDarkStore = create(
       registrationPending: false,
       darkstoreId: null,
       darkstoreDetails: {} || null,
+      totalRevenue: 0,
       fcmToken: null,
       setIsNewUser: (isNew) => set({ isNewUser: isNew }),
       setDarkstoreRegistered: (registered) => set({ darkstoreRegistered: registered }),
       setRegistrationPending: (pending) => set({ registrationPending: pending }),
       setDarkstoreDetails: (details) => set({ darkstoreDetails: details }),
+      setTotalRevenue: (revenue) => set({ totalRevenue: revenue }),
       setDarkstoreId: (id) => set({ darkstoreId: id }),
       setFcmToken: (token) => set({ fcmToken: token }),
       resetDarkstore: ()=> set({darkstoreId: null, darkstoreDetails: {}, darkstoreRegistered: false, registrationPending: false, fcmToken: null}) 
