@@ -505,7 +505,7 @@ const OrdersPage = () => {
     <div className="container mx-auto py-10">
       <audio 
         ref={audioRef} 
-        src="/notification.mp3" 
+        src="/public/notification.mp3" 
         preload="auto"
       />
       
