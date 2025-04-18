@@ -37,6 +37,7 @@ export function AddProductForm({ onClose, onSuccess }) {
   const [categoryPage, setCategoryPage] = useState(1)
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
   const [hasMoreCategories, setHasMoreCategories] = useState(true)
+  const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const selectContentRef = useRef(null)
 
   const form = useForm({
@@ -55,6 +56,8 @@ export function AddProductForm({ onClose, onSuccess }) {
   const fetchCategories = async (page = 1) => {
     try {
       setIsLoadingCategories(true)
+      console.log(`Fetching categories page ${page} for darkstore ${darkstoreId}`)
+      
       const response = await axiosInstance.get('/api/v1/category/admin/getcategories', {
         params: {
           page,
@@ -63,23 +66,46 @@ export function AddProductForm({ onClose, onSuccess }) {
         }
       })
       
+      console.log("Categories API response:", response.data)
+      
       const { data } = response.data
+      
+      if (!data || !data.categories) {
+        console.error("Invalid response format:", response.data)
+        toast({
+          title: "Error",
+          description: "Invalid data format received from server",
+          variant: "destructive"
+        })
+        return
+      }
+      
       const newCategories = data.categories
       
       if (page === 1) {
         setCategories(newCategories)
       } else {
-        setCategories(prev => [...prev, ...newCategories])
+        // Make sure we're not adding duplicates
+        setCategories(prev => {
+          const existingIds = prev.map(cat => cat._id)
+          const filteredNew = newCategories.filter(cat => !existingIds.includes(cat._id))
+          return [...prev, ...filteredNew]
+        })
       }
       
       // Check if there are more categories to load
-      setHasMoreCategories(data.pagination.hasNextPage)
+      const hasNext = data.pagination?.hasNextPage || 
+                      (data.pagination?.currentPage < data.pagination?.totalPages)
+                      
+      console.log(`Has more categories: ${hasNext}, Current page: ${data.pagination?.currentPage}, Total pages: ${data.pagination?.totalPages}`)
+      
+      setHasMoreCategories(hasNext)
       setCategoryPage(page)
     } catch (error) {
       console.error("Error fetching categories:", error)
       toast({
         title: "Error",
-        description: "Failed to load categories",
+        description: "Failed to load categories: " + (error.response?.data?.message || error.message),
         variant: "destructive"
       })
     } finally {
@@ -92,14 +118,20 @@ export function AddProductForm({ onClose, onSuccess }) {
     fetchCategories()
   }, [darkstoreId])
 
-  // Handle scroll in the category dropdown
-  const handleCategoryScroll = (e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target
-    
-    // Check if scrolled to bottom
-    if (scrollHeight - scrollTop <= clientHeight * 1.5 && hasMoreCategories && !isLoadingCategories) {
-      fetchCategories(categoryPage + 1)
+  // Load more categories on button click
+  const loadMoreCategories = () => {
+    console.log(`Loading more categories, current page: ${categoryPage}, has more: ${hasMoreCategories}`)
+    if (hasMoreCategories && !isLoadingCategories) {
+      const nextPage = categoryPage + 1
+      console.log(`Fetching page ${nextPage}`)
+      fetchCategories(nextPage)
     }
+  }
+
+  // Handle category selection
+  const handleCategorySelect = (categoryId) => {
+    setSelectedCategoryId(categoryId)
+    form.setValue("categoryId", categoryId)
   }
 
   const handleImageUpload = (e) => {
@@ -155,22 +187,32 @@ export function AddProductForm({ onClose, onSuccess }) {
         }
       )
       
-      if (response.status === 200) {
+      if (response.status >= 200 && response.status < 300) {
         console.log("product created successfully::", JSON.stringify(response));
 
         toast({
           title: "Product Created",
           description: "New product created successfully"
         })
-        onSuccess?.()
-        onClose()
+        
+        // Call onSuccess if provided
+        if (typeof onSuccess === 'function') {
+          onSuccess()
+        }
+        
+        // Ensure the form closes
+        if (typeof onClose === 'function') {
+          onClose()
+        }
+      } else {
+        throw new Error(response.data?.message || "Failed to create product")
       }
       
     } catch (error) {
       console.error("Error creating product:", error)
       toast({
         title: "Error Creating Product",
-        description: error.response?.data?.message || "Server error creating product",
+        description: error.response?.data?.message || error.message || "Server error creating product",
         variant: "destructive"
       })
     } finally {
@@ -252,8 +294,7 @@ export function AddProductForm({ onClose, onSuccess }) {
                 </FormControl>
                 <SelectContent 
                   ref={selectContentRef}
-                  onScroll={handleCategoryScroll}
-                  className="max-h-[200px]"
+                  className="max-h-[200px] relative"
                 >
                   {categories.map((category) => (
                     <SelectItem 
@@ -263,12 +304,35 @@ export function AddProductForm({ onClose, onSuccess }) {
                       {category.categoryName}
                     </SelectItem>
                   ))}
-                  {isLoadingCategories && (
-                    <div className="flex items-center justify-center py-2">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      <span className="text-sm text-muted-foreground">Loading...</span>
-                    </div>
-                  )}
+                  
+                  {/* Always show the button for testing */}
+                  <div className="py-2 px-2 border-t mt-1 sticky bottom-0 bg-white">
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      className="w-full"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Use a timeout to prevent dropdown from closing
+                        setTimeout(() => {
+                          loadMoreCategories();
+                        }, 10);
+                        console.log("Show More button clicked");
+                      }}
+                      disabled={isLoadingCategories}
+                    >
+                      {isLoadingCategories ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Loading Categories...
+                        </>
+                      ) : (
+                        "Show More Categories"
+                      )}
+                    </Button>
+                  </div>
                 </SelectContent>
               </Select>
               <FormMessage />
