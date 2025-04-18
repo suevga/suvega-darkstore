@@ -1,9 +1,9 @@
-import React, { useState } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { useToast } from "../hooks/use-toast"
 import { Button } from "./ui/button"
 import axiosInstance from "../api/axiosInstance"
-import { X } from 'lucide-react'
+import { X, Loader2 } from 'lucide-react'
 import {
   Form,
   FormControl,
@@ -29,8 +29,15 @@ export function AddProductForm({ onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
   const [productImages, setProductImages] = useState([])
   const { darkstoreId } = useDarkStore()
-  const { categories } = useCategoryStore()
+  const { categories: storeCategories } = useCategoryStore()
   const { toast } = useToast()
+  
+  // Add new state for categories pagination
+  const [categories, setCategories] = useState([])
+  const [categoryPage, setCategoryPage] = useState(1)
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false)
+  const [hasMoreCategories, setHasMoreCategories] = useState(true)
+  const selectContentRef = useRef(null)
 
   const form = useForm({
     defaultValues: {
@@ -43,6 +50,57 @@ export function AddProductForm({ onClose, onSuccess }) {
       status: "private",
     },
   })
+
+  // Function to fetch categories with pagination
+  const fetchCategories = async (page = 1) => {
+    try {
+      setIsLoadingCategories(true)
+      const response = await axiosInstance.get('/api/v1/category/admin/getcategories', {
+        params: {
+          page,
+          limit: 10,
+          darkStoreId: darkstoreId
+        }
+      })
+      
+      const { data } = response.data
+      const newCategories = data.categories
+      
+      if (page === 1) {
+        setCategories(newCategories)
+      } else {
+        setCategories(prev => [...prev, ...newCategories])
+      }
+      
+      // Check if there are more categories to load
+      setHasMoreCategories(data.pagination.hasNextPage)
+      setCategoryPage(page)
+    } catch (error) {
+      console.error("Error fetching categories:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load categories",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoadingCategories(false)
+    }
+  }
+
+  // Load initial categories
+  useEffect(() => {
+    fetchCategories()
+  }, [darkstoreId])
+
+  // Handle scroll in the category dropdown
+  const handleCategoryScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target
+    
+    // Check if scrolled to bottom
+    if (scrollHeight - scrollTop <= clientHeight * 1.5 && hasMoreCategories && !isLoadingCategories) {
+      fetchCategories(categoryPage + 1)
+    }
+  }
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files || [])
@@ -184,7 +242,7 @@ export function AddProductForm({ onClose, onSuccess }) {
               <FormLabel>Category</FormLabel>
               <Select 
                 onValueChange={field.onChange} 
-                defaultValue={field.value}
+                value={field.value}
                 disabled={loading}
               >
                 <FormControl>
@@ -192,7 +250,11 @@ export function AddProductForm({ onClose, onSuccess }) {
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent 
+                  ref={selectContentRef}
+                  onScroll={handleCategoryScroll}
+                  className="max-h-[200px]"
+                >
                   {categories.map((category) => (
                     <SelectItem 
                       key={category._id} 
@@ -201,6 +263,12 @@ export function AddProductForm({ onClose, onSuccess }) {
                       {category.categoryName}
                     </SelectItem>
                   ))}
+                  {isLoadingCategories && (
+                    <div className="flex items-center justify-center py-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-sm text-muted-foreground">Loading...</span>
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -296,7 +364,7 @@ export function AddProductForm({ onClose, onSuccess }) {
                 <FormLabel>Status</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
-                  defaultValue={field.value}
+                  value={field.value}
                   disabled={loading}
                 >
                   <FormControl>

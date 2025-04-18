@@ -342,7 +342,7 @@ export function EditProductForm({ product, onClose, onSuccess }) {
                 <FormLabel>Status</FormLabel>
                 <Select 
                   onValueChange={field.onChange} 
-                  defaultValue={field.value}
+                  value={field.value}
                   disabled={loading}
                 >
                   <FormControl>
