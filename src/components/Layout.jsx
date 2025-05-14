@@ -10,6 +10,7 @@ import { useUserStore } from '../store/allUsersStore.js'
 import { useDarkStore } from '../store/darkStore.js'
 import { useCategoryStore } from '../store/categoryStore.js'
 import { useProductStore } from '../store/productStore.js'
+import GlobalNotificationService from './GlobalNotificationService.jsx'
 
 export const Layout = ()=> {
   const [collapsed, setCollapsed] = useState(false);
@@ -59,6 +60,9 @@ export const Layout = ()=> {
 
   return (
     <div className="flex h-screen bg-gray-100">
+      {/* Global Notification Service - placed at the app root */}
+      <GlobalNotificationService />
+      
       <aside  className={cn(
           "bg-white shadow-md transition-all duration-300 ease-in-out relative",
           collapsed ? "w-16" : "w-64"

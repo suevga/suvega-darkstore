@@ -8,6 +8,7 @@ class SocketService {
   static instance = null;
   socket = null;
   darkStoreId = null;
+  isConnecting = false;
 
   static getInstance() {
     if (!SocketService.instance) {
@@ -17,25 +18,30 @@ class SocketService {
   }
 
   connect(darkStoreId) {
+    if (this.isConnecting) {
+      return;
+    }
+
     if (this.socket?.connected && this.darkStoreId === darkStoreId) {
-      console.log("Already connected to socket with darkStoreId:", darkStoreId);
       return;
     }
 
     // Disconnect existing socket if we're reconnecting with a different darkStoreId
     if (this.socket) {
-      console.log("Disconnecting existing socket before reconnecting");
       this.disconnect();
     }
 
+    this.isConnecting = true;
     this.darkStoreId = darkStoreId;
-    console.log("Connecting to socket server with darkStoreId:", darkStoreId);
+    
+    // Use environment config for server URL when possible
+    const socketServerUrl = envConfig.socketUrl || envConfig.backendUrl || "http://localhost:8080";
     
     // Make sure this port matches your backend server port where socket.io is running
-    this.socket = io(envConfig.backendUrl, {
+    this.socket = io(socketServerUrl, {
       transports: ["websocket", "polling"], // Add polling as fallback
       reconnection: true,
-      reconnectionAttempts: 10, // Increased from 5
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       query: { 
         type: "darkStore", 
@@ -45,29 +51,30 @@ class SocketService {
 
     // Join darkstore room on connection
     this.socket.on("connect", () => {
-      console.log("Connected to socket server with ID:", this.socket.id);
+      this.isConnecting = false;
       // Make sure we join the room immediately after connecting
       this.joinDarkStoreRoom(darkStoreId);
       
-      // Debug: Check socket connection status
-      console.log("Socket connected:", this.socket.connected);
-      console.log("Active transport:", this.socket.io.engine.transport.name);
-      
       // Notify the server we're ready to receive updates
       this.socket.emit('darkStoreReady', { darkStoreId });
+      
+      // Dispatch an event that we're connected - useful for UI updates
+      window.dispatchEvent(new Event('socketConnected'));
     });
 
     this.socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
+      this.isConnecting = false;
       toast({
         title: "Connection Error",
         description: "Failed to connect to notification server. Retrying...",
         variant: "destructive",
       });
+      
+      // Dispatch event that socket failed to connect
+      window.dispatchEvent(new Event('socketConnectError'));
     });
 
     this.socket.on("roomJoined", (data) => {
-      console.log("Successfully joined room:", data.room);
       toast({
         title: "Connected",
         description: `Connected to ${data.room}`
@@ -79,11 +86,9 @@ class SocketService {
 
   joinDarkStoreRoom(darkStoreId) {
     if (!this.socket || !darkStoreId) {
-      console.warn("Cannot join room: Socket or darkStoreId is missing");
       return;
     }
     
-    console.log(`Attempting to join darkStore room: darkStore_${darkStoreId}`);
     this.socket.emit("joinRoom", {
       type: "darkStore",
       id: darkStoreId
@@ -92,7 +97,6 @@ class SocketService {
 
   joinOrderRoom(orderId) {
     if (!this.socket || !orderId) {
-      console.warn("Cannot join order room: Socket or orderId is missing");
       return;
     }
     
@@ -100,19 +104,12 @@ class SocketService {
       type: "order",
       id: orderId
     });
-    console.log(`Joined order room: order_${orderId}`);
   }
 
   setupEventListeners() {
     if (!this.socket) {
-      console.warn("Cannot setup event listeners: Socket is missing");
       return;
     }
-
-    // Debug helper function
-    const logEvent = (eventName, data) => {
-      console.log(`Event received [${eventName}]:`, data);
-    };
 
     // Clear any existing listeners to prevent duplicates
     this.socket.off("newOrderRequest");
@@ -128,8 +125,6 @@ class SocketService {
     
     newOrderEvents.forEach(eventName => {
       this.socket.on(eventName, (data) => {
-        logEvent(eventName, data);
-        
         toast({
           title: "New Order Received",
           description: `Order ID: ${data.orderId || (data.order?._id || 'Unknown')}`
@@ -142,13 +137,22 @@ class SocketService {
           
           // Fetch and add the new order
           this.fetchAndAddOrder(orderId);
+          
+          // Dispatch a custom event to ensure notification sound plays globally
+          // This event will be caught by the GlobalNotificationService
+          const notificationEvent = new CustomEvent('newOrderNotification', { 
+            detail: {
+              ...data,
+              timestamp: new Date().toISOString()
+            } 
+          });
+          window.dispatchEvent(notificationEvent);
         }
       });
     });
 
     // Listen for order status updates
     this.socket.on("orderUpdate", (data) => {
-      logEvent("orderUpdate", data);
       const { updateOrder } = useOrderStore.getState();
       
       if (data.orderId) {
@@ -191,7 +195,6 @@ class SocketService {
 
     // Listen for rider location updates
     this.socket.on("riderLocationUpdate", (data) => {
-      logEvent("riderLocationUpdate", data);
       if (data.orderId) {
         const { updateOrder } = useOrderStore.getState();
         updateOrder(data.orderId, { riderLocation: data });
@@ -200,21 +203,29 @@ class SocketService {
 
     // Listen for admin-specific notifications
     this.socket.on("adminNotification", (data) => {
-      logEvent("adminNotification", data);
       toast({
         title: "Admin Notification",
         description: data.message,
       });
+      
+      // Dispatch a global notification event for this admin notification too
+      const notificationEvent = new CustomEvent('adminNotification', { 
+        detail: {
+          ...data,
+          timestamp: new Date().toISOString()
+        } 
+      });
+      window.dispatchEvent(notificationEvent);
     });
 
     this.socket.on("disconnect", (reason) => {
-      console.log("Disconnected from socket server. Reason:", reason);
-      
       // Auto-reconnect for certain disconnection reasons
       if (reason === "io server disconnect" || reason === "transport close") {
-        console.log("Attempting to reconnect...");
         this.socket.connect();
       }
+      
+      // Dispatch event that socket disconnected
+      window.dispatchEvent(new Event('socketDisconnected'));
     });
 
     this.socket.on("error", (error) => {
@@ -224,17 +235,14 @@ class SocketService {
 
   async fetchAndAddOrder(orderId) {
     try {
-      console.log("Fetching order details for:", orderId);
       const response = await axiosInstance.get(`/api/v1/order/details/${orderId}`);
       
       // Check if the response is already JSON
       const data = response.data;
-      console.log("log after fetching order", data);
       
       if (data.success || data.statusCode === 200) {
         const { addOrder, setOrders, orders } = useOrderStore.getState();
         const orderData = data.data?.order || data.data;
-        console.log("Adding order to store:", orderData);
         
         // Check if order already exists to avoid duplicates
         const existingOrder = orders.find(o => o._id === orderData._id);
@@ -247,11 +255,9 @@ class SocketService {
             description: `Order #${orderData._id.slice(-6)} has been added to your list`,
           });
         } else {
-          console.log("Order already exists in store, updating instead");
           setOrders([...orders.filter(o => o._id !== orderData._id), orderData]);
         }
       } else {
-        console.error("Error response from API:", data);
         toast({
           title: "Error",
           description: "Failed to fetch order details",
@@ -259,7 +265,6 @@ class SocketService {
         });
       }
     } catch (error) {
-      console.error('Error fetching new order:', error);
       toast({
         title: "Error",
         description: "Failed to fetch order details",
@@ -270,10 +275,10 @@ class SocketService {
 
   disconnect() {
     if (this.socket) {
-      console.log("Disconnecting socket");
       this.socket.disconnect();
       this.socket = null;
       this.darkStoreId = null;
+      this.isConnecting = false;
     }
   }
 }

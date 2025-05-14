@@ -42,7 +42,6 @@ const OrdersPage = () => {
   const [orderProducts, setOrderProducts] = useState({});
   const [activeTab, setActiveTab] = useState("pending");
   const [hasNewNotification, setHasNewNotification] = useState(false);
-  const audioRef = useRef(null);
   
   const { 
     orders, 
@@ -59,37 +58,6 @@ const OrdersPage = () => {
   const { users } = useUserStore();
   const [socketInitialized, setSocketInitialized] = useState(false);
   
-  // Function to play notification sound
-  const playNotificationSound = () => {
-    try {
-      console.log("Attempting to play notification sound");
-      if (audioRef.current) {
-        // Reset the audio to the beginning
-        audioRef.current.currentTime = 0;
-        
-        // Create a user interaction context by handling it within a user action
-        const playPromise = audioRef.current.play();
-        
-        // Handle play() promise to catch any errors
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            console.log("Notification sound played successfully");
-          }).catch(error => {
-            console.error("Error playing notification sound:", error.message);
-            // Try alternative approach if autoplay was prevented
-            if (error.name === "NotAllowedError") {
-              console.log("Autoplay prevented. Sound will only play after user interaction.");
-            }
-          });
-        }
-      } else {
-        console.error("Audio element reference not found");
-      }
-    } catch (err) {
-      console.error("Error attempting to play sound:", err);
-    }
-  };
-  
   // Socket connection setup
   useEffect(() => {
     if (!darkstoreId) {
@@ -98,6 +66,7 @@ const OrdersPage = () => {
     }
     
     try {
+      // Initialize socket connection (the global notification service handles this now)
       const socketService = SocketService.getInstance();
       socketService.connect(darkstoreId);
       setSocketInitialized(true);
@@ -105,32 +74,13 @@ const OrdersPage = () => {
       // Verify we're connected to the socket server
       console.log("Socket connected status:", socketService.socket?.connected);
       
-      // Listen for new orders with the exact events backend is sending
-      const newOrderEvents = ["newOrderRequest", "NEW_ORDER_REQUEST", "newOrder", "globalNewOrder"];
+      // Add global event listener for notification indicator
+      const handleNewOrderNotification = () => {
+        console.log("Order page: New order notification event received");
+        setHasNewNotification(true);
+      };
       
-      newOrderEvents.forEach(eventName => {
-        socketService.socket?.on(eventName, (newOrder) => {
-          console.log(`New order received via socket [${eventName}]:`, newOrder);
-          
-          // No need to trigger a full refresh - let the socket service handle adding the order
-          // Only refresh the UI once the socket service has updated the store
-          setTimeout(() => {
-            console.log("Refreshing UI after socket update");
-            // A way to trigger rerender without full fetch
-            setSearchTerm(searchTerm => searchTerm);
-          }, 500);
-          
-          // Set notification indicator and play sound
-          setHasNewNotification(true);
-          playNotificationSound();
-          
-          toast({
-            title: "New Order",
-            description: `New order received: ${newOrder._id || (newOrder.orderId || 'Unknown')}`,
-            variant: "info",
-          });
-        });
-      });
+      window.addEventListener('newOrderNotification', handleNewOrderNotification);
       
       // If the socket is not connected, try to reconnect every 5 seconds
       const interval = setInterval(() => {
@@ -143,10 +93,8 @@ const OrdersPage = () => {
       
       return () => {
         clearInterval(interval);
-        // Cleanup socket event listeners
-        newOrderEvents.forEach(eventName => {
-          socketService.socket?.off(eventName);
-        });
+        // Remove global event listener
+        window.removeEventListener('newOrderNotification', handleNewOrderNotification);
         // Keep socket connected when navigating away, don't disconnect
       };
     } catch (error) {
@@ -503,19 +451,12 @@ const OrdersPage = () => {
 
   return (
     <div className="container mx-auto py-10">
-      <audio 
-        ref={audioRef} 
-        src="/notification.mp3" 
-        preload="auto"
-      />
-      
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Orders Management</h1>
         <div className="flex items-center space-x-4">
           <Button onClick={handleRefresh} variant="outline" size="sm">
             Refresh Orders
           </Button>
-          {/* Add a test button for sound in development */}
           <div className="relative">
             {hasNewNotification && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
