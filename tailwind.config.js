@@ -4,6 +4,20 @@ module.exports = {
     content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
   theme: {
   	extend: {
+  		screens: {
+  			xs: '375px',
+  			sm: '640px',
+  			md: '768px',
+  			lg: '1024px',
+  			xl: '1280px',
+  			"2xl": '1536px',
+  			"3xl": '1920px',
+  			mobile: {'max': '640px'},
+  			tablet: {'min': '641px', 'max': '1024px'},
+  			desktop: {'min': '1025px'},
+  			portrait: {'raw': '(orientation: portrait)'},
+  			landscape: {'raw': '(orientation: landscape)'},
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
