@@ -1,0 +1,11 @@
+[build]
+  command = "yarn build"
+  publish = "dist"
+
+[build.environment]
+  NPM_FLAGS = "--production=false"
+  NODE_VERSION = "22"
+
+# Use yarn instead of npm
+[build.processing]
+  skip_processing = false

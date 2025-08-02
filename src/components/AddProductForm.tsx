@@ -9,7 +9,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useDarkStore } from '../store/darkStore';
-import { useCategoryStore } from '../store/categoryStore';
+// import { useCategoryStore } from '../store/categoryStore';
 import { ImagePreview } from './ImagePreview';
 
 interface AddProductFormProps {
@@ -113,7 +113,7 @@ export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
       toast({
         title: 'Error',
         description:
-          'Failed to load categories: ' + (error.response?.data?.message || error.message),
+        'Failed to load categories: ' + ((error as any).response?.data?.message || (error as Error).message),
         variant: 'destructive',
       });
     } finally {
@@ -138,11 +138,11 @@ export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
     }
   };
 
-  // Handle category selection
-  const handleCategorySelect = categoryId => {
-    setSelectedCategoryId(categoryId);
-    form.setValue('categoryId', categoryId);
-  };
+  // Handle category selection (commented out as not currently used)
+  // const handleCategorySelect = (categoryId: string) => {
+  //   setSelectedCategoryId(categoryId);
+  //   form.setValue('categoryId', categoryId);
+  // };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -217,7 +217,7 @@ export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
       toast({
         title: 'Error Creating Product',
         description:
-          error.response?.data?.message || error.message || 'Server error creating product',
+          (error as any).response?.data?.message || (error as Error).message || 'Server error creating product',
         variant: 'destructive',
       });
     } finally {
