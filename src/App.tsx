@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { ClerkProvider, SignedIn, SignedOut } from '@clerk/clerk-react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 
@@ -40,19 +39,6 @@ const PublicRoute: FC<RouteProps> = ({ children }) => {
 function App() {
   const { error, requestLocation } = useLocation();
 
-  useEffect(() => {
-    // Check if the service worker is supported by the browser
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/firebase-messaging-sw.js')
-        .then(registration => {
-          console.log('Service Worker registered with scope:', registration.scope);
-        })
-        .catch(error => {
-          console.error('Service Worker registration failed:', error);
-        });
-    }
-  }, []);
 
   if (!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) {
     return (
