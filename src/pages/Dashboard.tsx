@@ -176,14 +176,6 @@ export default function DashboardPage() {
       href: '/dashboard',
     },
     {
-      title: 'Total Orders',
-      value: `${totalOrderCount?.toLocaleString() || '0'}`,
-      change: '+8.2%',
-      trend: 'up',
-      icon: ShoppingCart,
-      href: '/dashboard/orders',
-    },
-    {
       title: 'Average Order Value',
       value: `₹${avgOrderValue?.toLocaleString() || '2,850'}`,
       change: '+6.3%',
@@ -226,7 +218,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat) => (
           <Link to={stat.href} key={stat.title} className="block">
             <Card className="hover:shadow-lg transition-shadow duration-200">

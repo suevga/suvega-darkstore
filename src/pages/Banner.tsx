@@ -50,8 +50,6 @@ import {
   Cell,
   BarChart as ReBarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -119,7 +117,7 @@ export default function BannersPage() {
     }
   }, [getFilteredBanners]);
 
-  const handleInputChange = e => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -127,7 +125,7 @@ export default function BannersPage() {
     });
   };
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = (name: string, value: string) => {
     setFormData({
       ...formData,
       [name]: value === 'true' ? true : value === 'false' ? false : value,
@@ -142,7 +140,7 @@ export default function BannersPage() {
     }
   };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!formData.name || !formData.category || !bannerImage) {
@@ -184,7 +182,7 @@ export default function BannersPage() {
     setShowDeleteDialog(false);
   };
 
-  const formatDate = dateString => {
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
 

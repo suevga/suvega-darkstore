@@ -11,18 +11,9 @@ import {
 } from '../components/ui/table';
 import {
   Users,
-  TrendingUp,
-  UserPlus,
-  Activity,
-  Search,
-  Calendar,
-  MapPin,
-  Mail,
-  Phone
+  TrendingUp
 } from 'lucide-react';
 import {
-  AreaChart,
-  Area,
   PieChart,
   Pie,
   Cell,
@@ -54,8 +45,6 @@ export default function AllUsersPage() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Colors for charts
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
   const fetchUsers = async () => {
     if (!darkstoreId) {
@@ -80,16 +69,17 @@ export default function AllUsersPage() {
       }
     } catch (error) {
       console.log('error fetching users', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error fetching users';
       toast({
         title: 'Error',
-        description: error.response?.data?.message || 'Error fetching users',
+        description: errorMessage || 'Error fetching users',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
   };
-  console.log('users lists after fetching::', users.address);
+  console.log('users lists after fetching::', users.map(u => u.address));
 
   // Enhanced search filter - now includes email and better name/phone search
   const filteredUsers = users.filter(
@@ -124,7 +114,7 @@ export default function AllUsersPage() {
   ], [users.length]);
 
   const locationDistribution = useMemo(() => {
-    const locations = {};
+    const locations: Record<string, number> = {};
     users.forEach(user => {
       if (user.address && user.address.length > 0 && user.address[0].city) {
         const city = user.address[0].city;
@@ -133,7 +123,7 @@ export default function AllUsersPage() {
     });
     
     return Object.entries(locations)
-      .map(([city, count]) => ({ city, users: count }))
+      .map(([city, count]) => ({ city, users: count as number }))
       .sort((a, b) => b.users - a.users)
       .slice(0, 6);
   }, [users]);
@@ -143,6 +133,7 @@ export default function AllUsersPage() {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
     return users.filter(user => {
+      if (!user?.createdAt) return false;
       const userCreatedAt = new Date(user.createdAt);
       return userCreatedAt >= thirtyDaysAgo;
     }).length;
@@ -175,7 +166,7 @@ export default function AllUsersPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
+            <div className="text-2xl font-bold">{recentUsersCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -287,18 +278,19 @@ export default function AllUsersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User ID</TableHead>
+              {/* <TableHead>User ID</TableHead> */}
               <TableHead>Name</TableHead>
               <TableHead>Phone Number</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Address</TableHead>
+              <TableHead>Registered Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredUsers.length > 0 ? (
               filteredUsers.map(user => (
                 <TableRow key={user._id}>
-                  <TableCell className="font-medium">{user._id}</TableCell>
+                  {/* <TableCell className="font-medium">{user._id}</TableCell> */}
                   <TableCell>
                     {(user.address && user.address.length > 0 && user.address[0].fullName) || 'N/A'}
                   </TableCell>
@@ -308,6 +300,9 @@ export default function AllUsersPage() {
                     {user.address && user.address.length > 0 && user.address[0].city},
                     {user.address && user.address.length > 0 && user.address[0].addressLine},
                     {user.address && user.address.length > 0 && user.address[0].pinCode}
+                  </TableCell>
+                  <TableCell>
+                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                   </TableCell>
                 </TableRow>
               ))

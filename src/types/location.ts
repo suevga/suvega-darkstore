@@ -16,3 +16,8 @@ export interface GoogleLocationResponse {
     message: string;
   };
 }
+
+export interface Location {
+  type: string,
+  coordinates: number[],
+}
