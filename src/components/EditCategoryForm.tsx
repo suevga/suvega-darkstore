@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { useToast } from '../hooks/use-toast';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { Input } from './ui/input';
@@ -14,6 +14,7 @@ export function EditCategoryForm({ category, onClose }: {
 }) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const api = useBackend();
 
   const form = useForm({
     defaultValues: {
@@ -35,11 +36,14 @@ export function EditCategoryForm({ category, onClose }: {
         formData.append('featuredImage', values.featuredImage);
       }
 
-      const response = await axiosInstance.patch(
-        `/api/v1/category/admin/category/${category._id}`,
-        formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
+      // Build formData for full update (including optional image)
+      const updateForm = new FormData();
+      updateForm.append('categoryName', values.categoryName);
+      updateForm.append('description', values.description);
+      updateForm.append('status', values.status);
+      if (values.featuredImage) updateForm.append('featuredImage', values.featuredImage);
+
+      const response = await api.updateCategory(category._id, updateForm);
       if (response.status === 200) {
         console.log('Successfully updated category::', JSON.stringify(response));
 

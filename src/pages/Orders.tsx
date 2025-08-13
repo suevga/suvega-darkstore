@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import {
@@ -85,6 +85,7 @@ const OrdersPage = () => {
   const { darkstoreId } = useDarkStore();
   const { users } = useUserStore();
   const [socketInitialized, setSocketInitialized] = useState(false);
+  const api = useBackend();
 
   // Socket connection setup
   useEffect(() => {
@@ -140,9 +141,7 @@ const OrdersPage = () => {
 
     try {
       console.log(`Fetching orders for darkstore ${darkstoreId}, page ${page}`);
-      const response = await axiosInstance.get(
-        `/api/v1/order/allorders/${darkstoreId}?page=${page}&limit=10`
-      );
+      const response = await api.getOrders(darkstoreId, page, 10);
 
       if (response.status === 200 && response.data?.data?.orders) {
         const fetchedOrders = response.data.data.orders;
@@ -206,9 +205,7 @@ const OrdersPage = () => {
         const productIdsArray = Array.from(productIds);
         console.log(`Fetching details for ${productIdsArray.length} products`);
 
-        const response = await axiosInstance.post('/api/v1/product/get-products-by-ids', {
-          productIds: productIdsArray,
-        });
+        const response = await api.getProductsByIds(productIdsArray as string[]);
 
         if (response.status === 200 && response.data?.data) {
           const productsData = response.data.data;
@@ -240,7 +237,7 @@ const OrdersPage = () => {
   const handleOrderDelete = async (orderId: string) => {
     try {
       setLoading(prev => ({ ...prev, action: true }));
-      const response = await axiosInstance.delete(`/api/v1/order/delete-order/${orderId}`);
+      const response = await api.deleteOrderById(orderId);
 
       if (response.status === 200) {
         deleteOrder(orderId);
@@ -279,9 +276,7 @@ const OrdersPage = () => {
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     try {
       setLoading(prev => ({ ...prev, action: true }));
-      const response = await axiosInstance.patch(`/api/v1/order/status/${orderId}`, {
-        status: newStatus,
-      });
+      const response = await api.updateOrderStatus(orderId, newStatus);
 
       if (response.status === 200) {
         const updatedOrder = response.data.data.order;
@@ -313,9 +308,7 @@ const OrdersPage = () => {
       console.log('Accepting order:', orderId);
 
       setLoading(prev => ({ ...prev, action: true }));
-      const response = await axiosInstance.patch(`/api/v1/order/store-response/${orderId}`, {
-        accept: true,
-      });
+      const response = await api.storeRespondToOrder(orderId, true);
 
       console.log('response after accepting order', response);
 
@@ -350,9 +343,7 @@ const OrdersPage = () => {
   const handleRejectOrder = async (orderId: string) => {
     try {
       setLoading(prev => ({ ...prev, action: true }));
-      const response = await axiosInstance.patch(`/api/v1/order/store-response/${orderId}`, {
-        accept: false,
-      });
+      const response = await api.storeRespondToOrder(orderId, false);
       if (response.status === 200) {
         const updatedOrder = {
           ...orders.find(o => o._id === orderId),

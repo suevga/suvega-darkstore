@@ -15,7 +15,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { useDarkStore } from '../store/darkStore';
 
 import { Button } from '../components/ui/button';
@@ -73,6 +73,7 @@ export default function CategoriesPage() {
   const { setTotalCategoryCount, totalCategoryCount, setCategories, categories } =
     useCategoryStore();
   const { totalProducts } = useProductStore();
+  const api = useBackend();
   // Pagination and filter states
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -84,15 +85,7 @@ export default function CategoriesPage() {
       setLoading(true);
       setError(null);
 
-      const response = await axiosInstance.get('/api/v1/category/admin/getcategories', {
-        params: {
-          page: currentPage,
-          limit: 10,
-          darkStoreId: darkstoreId,
-          search: searchTerm,
-          status: statusFilter,
-        },
-      });
+      const response = await api.getCategories(currentPage, 10, darkstoreId || undefined, searchTerm || undefined, statusFilter || undefined);
 
       const { data } = response.data;
       setCategories(data.categories);
@@ -128,7 +121,7 @@ export default function CategoriesPage() {
   const handleDeleteConfirm = async () => {
     try {
       if (selectedCategory) {
-        await axiosInstance.delete(`/api/v1/category/admin/category/${selectedCategory._id}`);
+        await api.deleteCategory(selectedCategory._id);
         toast({
           title: 'Category deleted',
           description: 'Category has been successfully deleted',
@@ -169,9 +162,7 @@ export default function CategoriesPage() {
   const toggleStatus = async (category: any) => {
     try {
       const updatedStatus = category.status === 'published' ? 'private' : 'published';
-      await axiosInstance.patch(`/api/v1/category/admin/category/${category._id}`, {
-        status: updatedStatus,
-      });
+      await api.toggleCategoryStatus(category._id, updatedStatus);
       toast({
         title: 'Success',
         description: `Category status changed to ${updatedStatus}`,

@@ -1,4 +1,4 @@
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import {
@@ -46,6 +46,7 @@ export default function AllUsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
 
+  const api = useBackend();
   const fetchUsers = async () => {
     if (!darkstoreId) {
       toast({
@@ -58,7 +59,7 @@ export default function AllUsersPage() {
 
     setLoading(true);
     try {
-      const response = await axiosInstance.get(`/api/v1/users/userlists/${darkstoreId}`);
+      const response = await api.getUsers(darkstoreId);
       if (response.status === 200) {
         // Set the users in the state
         setUsers(response.data.data.users);

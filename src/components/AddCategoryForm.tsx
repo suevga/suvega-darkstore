@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useToast } from '../hooks/use-toast';
 import { Button } from './ui/button';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -26,6 +26,7 @@ export function AddCategoryForm({ onClose, onSuccess }: AddCategoryFormProps) {
   const [loading, setLoading] = useState(false);
   const { darkstoreId } = useDarkStore();
   const { toast } = useToast();
+  const api = useBackend();
 
   const form = useForm({
     defaultValues: {
@@ -51,10 +52,7 @@ export function AddCategoryForm({ onClose, onSuccess }: AddCategoryFormProps) {
         formData.append('featuredImage', values.featuredImage);
       }
 
-      const response = await axiosInstance.post('/api/v1/category/admin/addcategory', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        params: { darkstoreId },
-      });
+      const response = await api.addCategory(formData, darkstoreId || undefined);
 
       if (response.status === 200) {
         toast({

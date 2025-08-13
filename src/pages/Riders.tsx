@@ -10,9 +10,7 @@ import {
   Mail,
   Phone,
   Truck,
-  CreditCard,
-  Calendar,
-  MapPin
+  CreditCard
 } from 'lucide-react';
 import {
   PieChart,
@@ -29,7 +27,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { useDarkStore } from '../store/darkStore';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -91,30 +89,39 @@ export default function RidersPage() {
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [activeTab, setActiveTab] = useState('active');
+  const api = useBackend();
 
-  console.log('reject reason::', rejectReason);
+  
 
   useEffect(() => {
+    let cancelled = false;
     const getRiders = async () => {
       try {
-        const response = await axiosInstance.get(`/api/v1/rider/get-all-riders/${darkstoreId}`);
-        if (response.status === 200) {
-          console.log('get rider list in verify rider page::', response.data);
+        if (!darkstoreId) return;
+        const response = await api.getAllRiders(darkstoreId);
+        console.log('all riders::', response.data.data.riders);
+        
+        if (!cancelled && response.status === 200) {
           // Ensure we're storing an array
-          const ridersData = Array.isArray(response.data)
-            ? response.data
-            : response.data && response.data.riders
-              ? response.data.riders
+          const ridersData = Array.isArray(response.data.data)
+            ? response.data.data
+            : response.data.data && response.data.data.riders
+              ? response.data.data.riders
               : [];
           setAllRiders(ridersData);
           setTotalRiders(ridersData.length);
         }
       } catch (error) {
-        console.log('error in get rider list in verify rider page::', error);
+        if (!cancelled) {
+          console.log('error in get rider list in verify rider page::', error);
+        }
       }
     };
     getRiders();
-  }, [darkstoreId, setAllRiders, setTotalRiders]);
+    return () => {
+      cancelled = true;
+    };
+  }, [darkstoreId]);
 
   // Ensure allRiders is an array before filtering
   const filteredRiders = Array.isArray(allRiders)
@@ -156,9 +163,7 @@ export default function RidersPage() {
 
     setIsVerifying(true);
     try {
-      const response = await axiosInstance.patch(`/api/v1/rider/verify/${selectedRider._id}`, {
-        isApproved: true,
-      });
+      const response = await api.verifyRider(selectedRider._id);
 
       if (response.status === 200) {
         // Update the rider in the list
@@ -185,10 +190,7 @@ export default function RidersPage() {
     try {
       console.log('reject reason in the handleRejectRider::', rejectReason);
 
-      const response = await axiosInstance.post(`/api/v1/rider/reject/${selectedRider._id}`, {
-        isRejected: true,
-        rejectionReason: rejectReason,
-      });
+      const response = await api.rejectRider(selectedRider._id, rejectReason);
 
       console.log('Rejection response:', response.data);
 
@@ -255,7 +257,7 @@ export default function RidersPage() {
   ], [allRiders]);
 
   const vehicleTypeDistribution = useMemo(() => {
-    const vehicleTypes = {};
+    const vehicleTypes: Record<string, number> = {};
     allRiders.forEach(rider => {
       if (rider.vehicleType) {
         vehicleTypes[rider.vehicleType] = (vehicleTypes[rider.vehicleType] || 0) + 1;
@@ -263,12 +265,12 @@ export default function RidersPage() {
     });
     
     return Object.entries(vehicleTypes)
-      .map(([type, count]) => ({ type, count }))
-      .sort((a, b) => b.count - a.count);
+      .map(([type, count]) => ({ type, count: Number(count) }))
+      .sort((a, b) => Number(b.count) - Number(a.count));
   }, [allRiders]);
 
   const riderRegistrationTrend = useMemo(() => {
-    const monthCounts = {};
+    const monthCounts: Record<string, number> = {};
     allRiders.forEach(rider => {
       const date = new Date(rider.createdAt);
       const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -522,7 +524,7 @@ export default function RidersPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => navigator.clipboard.writeText(rider._id || rider.id)}
+                              onClick={() => navigator.clipboard.writeText(String(rider._id || rider.id || ''))}
                             >
                               Copy rider ID
                             </DropdownMenuItem>
@@ -592,7 +594,7 @@ export default function RidersPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => navigator.clipboard.writeText(rider._id || rider.id)}
+                              onClick={() => navigator.clipboard.writeText(String(rider._id || rider.id || ''))}
                             >
                               Copy rider ID
                             </DropdownMenuItem>

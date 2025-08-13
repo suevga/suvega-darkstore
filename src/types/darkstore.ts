@@ -38,5 +38,5 @@ interface Address {
   street: string,
   district: string,
   state: string,
-  pinCode: string,
+  pincode: string,
 }

@@ -68,7 +68,9 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useBanner } from '../hooks/useBanner';
+import type { Banner as BannerType } from '../types/banner';
 import { useDarkStore } from '../store/darkStore';
+import { BannerRedirectSelector, type BannerCategory } from '../components/BannerRedirectSelector';
 
 export default function BannersPage() {
   const {
@@ -89,7 +91,7 @@ export default function BannersPage() {
 
   const [showAddBannerDialog, setShowAddBannerDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedBanner, setSelectedBanner] = useState(null);
+  const [selectedBanner, setSelectedBanner] = useState<BannerType | null>(null);
   const { darkstoreId } = useDarkStore();
 
   // Form state
@@ -98,14 +100,15 @@ export default function BannersPage() {
     category: '',
     tags: '',
     storeId: darkstoreId,
+    redirectUrl: '',
     isActive: false,
   });
-  const [bannerImage, setBannerImage] = useState(null);
+  const [bannerImage, setBannerImage] = useState<File | null>(null);
 
   // Fetch banners on component mount
   useEffect(() => {
     fetchBanners(darkstoreId);
-  }, [fetchBanners]);
+  }, [fetchBanners, darkstoreId]);
 
   // Use useMemo to safely get filtered banners and add error handling
   const filteredBanners = useMemo(() => {
@@ -132,8 +135,8 @@ export default function BannersPage() {
     });
   };
 
-  const handleFileChange = e => {
-    const file = e.target.files[0];
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files ? e.target.files[0] : undefined;
     if (file) {
       console.log('Selected file:', file.name, file.type, file.size);
       setBannerImage(file);
@@ -143,16 +146,28 @@ export default function BannersPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    // Validate required fields
     if (!formData.name || !formData.category || !bannerImage) {
       toast({
         title: 'Error',
-        description: 'Please fill all required fields',
+        description: 'Please fill all required fields (Name, Category, Banner Image)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate redirectUrl based on category
+    if (!formData.redirectUrl) {
+      toast({
+        title: 'Error',
+        description: 'Please select a redirect target for the banner',
         variant: 'destructive',
       });
       return;
     }
 
     console.log('Submitting banner with image:', bannerImage.name);
+    console.log('Banner data:', formData);
     const success = await addBanner(formData, bannerImage);
     if (success) {
       setShowAddBannerDialog(false);
@@ -166,12 +181,13 @@ export default function BannersPage() {
       category: '',
       tags: '',
       storeId: darkstoreId,
+      redirectUrl: '',
       isActive: false,
     });
     setBannerImage(null);
   };
 
-  const confirmDelete = banner => {
+  const confirmDelete = (banner: BannerType) => {
     setSelectedBanner(banner);
     setShowDeleteDialog(true);
   };
@@ -182,9 +198,7 @@ export default function BannersPage() {
     setShowDeleteDialog(false);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
+  // const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString();
 
   // Check if banners data is valid
   const isValidBannersData = Array.isArray(banners) && banners.length > 0;
@@ -193,17 +207,17 @@ export default function BannersPage() {
   const categoryDistributionData = useMemo(() => {
     if (!Array.isArray(banners) || banners.length === 0) return [];
     
-    const categoryCount = {
+    const categoryCount: Record<string, number> = {
       offer: 0,
       product: 0,
       category: 0,
       advertisement: 0
     };
     
-    banners.forEach(banner => {
-      const category = banner.category?.toLowerCase() || 'other';
-      if (categoryCount.hasOwnProperty(category)) {
-        categoryCount[category]++;
+    (banners as BannerType[]).forEach((banner) => {
+      const category = (banner.category || 'other').toLowerCase();
+      if (Object.prototype.hasOwnProperty.call(categoryCount, category)) {
+        categoryCount[category] = (categoryCount[category] || 0) + 1;
       }
     });
     
@@ -218,7 +232,7 @@ export default function BannersPage() {
   const statusDistributionData = useMemo(() => {
     if (!Array.isArray(banners) || banners.length === 0) return [];
     
-    const activeCount = banners.filter(banner => banner.isActive).length;
+    const activeCount = (banners as BannerType[]).filter(banner => banner.isActive).length;
     const inactiveCount = banners.length - activeCount;
     
     return [
@@ -230,10 +244,10 @@ export default function BannersPage() {
   const tagAnalyticsData = useMemo(() => {
     if (!Array.isArray(banners) || banners.length === 0) return [];
     
-    const tagCount = {};
-    banners.forEach(banner => {
+    const tagCount: Record<string, number> = {};
+    (banners as BannerType[]).forEach(banner => {
       if (Array.isArray(banner.tags)) {
-        banner.tags.forEach(tag => {
+        banner.tags.forEach((tag: string) => {
           const cleanTag = tag.trim().toLowerCase();
           if (cleanTag) {
             tagCount[cleanTag] = (tagCount[cleanTag] || 0) + 1;
@@ -245,37 +259,34 @@ export default function BannersPage() {
     return Object.entries(tagCount)
       .map(([tag, count]) => ({
         tag: tag.charAt(0).toUpperCase() + tag.slice(1),
-        count: count
+        count: Number(count)
       }))
-      .sort((a, b) => b.count - a.count)
+      .sort((a, b) => Number(b.count) - Number(a.count))
       .slice(0, 8);
   }, [banners]);
 
   const categoryStatusData = useMemo(() => {
     if (!Array.isArray(banners) || banners.length === 0) return [];
     
-    const categoryStats = {
+    const categoryStats: Record<string, { active: number; inactive: number }> = {
       offer: { active: 0, inactive: 0 },
       product: { active: 0, inactive: 0 },
       category: { active: 0, inactive: 0 },
       advertisement: { active: 0, inactive: 0 }
     };
     
-    banners.forEach(banner => {
-      const category = banner.category?.toLowerCase() || 'other';
-      if (categoryStats.hasOwnProperty(category)) {
-        if (banner.isActive) {
-          categoryStats[category].active++;
-        } else {
-          categoryStats[category].inactive++;
-        }
+    (banners as BannerType[]).forEach((banner) => {
+      const categoryKey = (banner.category || 'other').toLowerCase();
+      if (Object.prototype.hasOwnProperty.call(categoryStats, categoryKey)) {
+        if (banner.isActive) categoryStats[categoryKey].active++;
+        else categoryStats[categoryKey].inactive++;
       }
     });
     
     return Object.entries(categoryStats)
       .filter(([category, stats]) => stats.active > 0 || stats.inactive > 0)
       .map(([category, stats]) => ({
-        category: category.charAt(0).toUpperCase() + category.slice(1),
+        category: (category as string).charAt(0).toUpperCase() + (category as string).slice(1),
         active: stats.active,
         inactive: stats.inactive,
         total: stats.active + stats.inactive
@@ -515,8 +526,8 @@ export default function BannersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredBanners.map(banner => (
-                <TableRow key={banner._id || `banner-${Math.random()}`}>
+              (filteredBanners as BannerType[]).map((banner) => (
+                <TableRow key={(banner as BannerType)._id || `banner-${Math.random()}`}>
                   <TableCell className="font-medium">{banner.name || 'Unnamed Banner'}</TableCell>
                   <TableCell>
                     {banner.image ? (
@@ -525,8 +536,9 @@ export default function BannersPage() {
                         alt={banner.name || 'Banner'}
                         className="h-12 w-20 object-cover rounded"
                         onError={e => {
-                          e.target.onerror = null;
-                          e.target.src = 'https://placehold.co/100x60?text=No+Image';
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = 'https://placehold.co/100x60?text=No+Image';
                         }}
                       />
                     ) : (
@@ -540,7 +552,7 @@ export default function BannersPage() {
                   </TableCell>
                   <TableCell>
                     {Array.isArray(banner.tags) ? (
-                      banner.tags.map((tag, idx) => (
+                      banner.tags.map((tag: string, idx: number) => (
                         <Badge key={idx} variant="secondary" className="mr-1">
                           {tag}
                         </Badge>
@@ -593,7 +605,7 @@ export default function BannersPage() {
 
       {/* Add Banner Dialog */}
       <Dialog open={showAddBannerDialog} onOpenChange={setShowAddBannerDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Banner</DialogTitle>
             <DialogDescription>
@@ -619,7 +631,7 @@ export default function BannersPage() {
                 <Label htmlFor="category" className="text-right">
                   Category *
                 </Label>
-                <Select onValueChange={value => handleSelectChange('category', value)} required>
+                   <Select onValueChange={(value: string) => handleSelectChange('category', value)} required>
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -657,13 +669,22 @@ export default function BannersPage() {
                   required
                 />
               </div>
+              
+              {/* Dynamic Redirect URL Selector */}
+              <BannerRedirectSelector
+                category={formData.category as BannerCategory}
+                redirectUrl={formData.redirectUrl}
+                onRedirectUrlChange={(redirectUrl) => 
+                  setFormData({ ...formData, redirectUrl })
+                }
+              />
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="status" className="text-right">
                   Status
                 </Label>
-                <Select
+                   <Select
                   defaultValue="false"
-                  onValueChange={value => handleSelectChange('isActive', value)}
+                   onValueChange={(value: string) => handleSelectChange('isActive', value)}
                 >
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select status" />
@@ -675,7 +696,7 @@ export default function BannersPage() {
                 </Select>
               </div>
               {/* Hidden input for storeId */}
-              <input type="hidden" name="storeId" value={formData.storeId} />
+              <input type="hidden" name="storeId" value={formData.storeId || ''} />
             </div>
             <div className="flex justify-end space-x-4">
               <Button variant="outline" type="button" onClick={() => setShowAddBannerDialog(false)}>
@@ -696,7 +717,7 @@ export default function BannersPage() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the banner "
-              {selectedBanner?.name}".
+              {(selectedBanner as BannerType | null)?.name}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

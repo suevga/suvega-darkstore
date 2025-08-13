@@ -1,23 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from './use-toast';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from './useBackend';
+import type { Banner as BannerType } from '../types/banner';
 
 export const useBanner = () => {
-  const [banners, setBanners] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [addingBanner, setAddingBanner] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statsCount, setStatsCount] = useState({
-    offer: 0,
-    product: 0,
-    category: 0,
-    advertisement: 0,
-  });
+  const [banners, setBanners] = useState<BannerType[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [addingBanner, setAddingBanner] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [statsCount, setStatsCount] = useState<{ offer: number; product: number; category: number; advertisement: number }>(
+    {
+      offer: 0,
+      product: 0,
+      category: 0,
+      advertisement: 0,
+    }
+  );
 
   // Calculate stats whenever banners change
   useEffect(() => {
-    const counts = {
+    const counts: { offer: number; product: number; category: number; advertisement: number } = {
       offer: 0,
       product: 0,
       category: 0,
@@ -25,60 +28,98 @@ export const useBanner = () => {
     };
 
     // Ensure banners is an array before iterating
-    const bannersArray = Array.isArray(banners) ? banners : [];
+    const bannersArray: BannerType[] = Array.isArray(banners) ? banners : [];
 
-    bannersArray.forEach(banner => {
-      if (counts[banner.category] !== undefined) {
-        counts[banner.category]++;
+    bannersArray.forEach((banner) => {
+      const key = (banner.category as string) as keyof typeof counts;
+      if (counts[key] !== undefined) {
+        counts[key]++;
       }
     });
 
     setStatsCount(counts);
   }, [banners]);
 
+  const api = useBackend();
   // Fetch all banners
-  const fetchBanners = useCallback(async storeId => {
+  const fetchBanners = useCallback(async (storeId: string | null | undefined) => {
     setLoading(true);
     try {
       console.log('storeId coming from the hook', storeId);
 
-      const response = await axiosInstance.get(`api/v1/banner/get-stores-banners/${storeId}`);
+      const response = await api.getStoreBanners(storeId as string);
 
       console.log('response coming from the api', response.data);
 
-      // In this specific API, banner data is in the message field as a JSON string
       const responseData = response.data;
 
       if (responseData && responseData.success === true) {
-        // Check if message contains JSON data (banner array)
-        if (responseData.message && typeof responseData.message === 'string') {
-          try {
-            // Try to parse the message as JSON
-            const parsedBanners = JSON.parse(responseData.message);
-            console.log('Parsed banners from message:', parsedBanners);
+        // Try common shapes first
+        const fromData = Array.isArray(responseData?.data?.banners)
+          ? responseData.data.banners
+          : Array.isArray(responseData?.data)
+          ? responseData.data
+          : undefined;
 
-            if (Array.isArray(parsedBanners)) {
-              setBanners(parsedBanners);
-            } else {
-              console.error('Parsed message is not an array:', parsedBanners);
-              setBanners([]);
+        const fromBanners = Array.isArray(responseData?.banners)
+          ? responseData.banners
+          : undefined;
+
+        const fromMessageArray = Array.isArray(responseData?.message)
+          ? responseData.message
+          : undefined;
+
+        let finalBanners: BannerType[] | undefined = fromData || fromBanners || fromMessageArray;
+
+        // If message is a string, only attempt JSON.parse when it looks like valid JSON
+        if (!finalBanners && typeof responseData?.message === 'string') {
+          const msg = responseData.message.trim();
+          
+          // More robust JSON validation - check if it's properly formatted JSON
+          const looksLikeValidJson = (
+            (msg.startsWith('[') && msg.endsWith(']')) ||
+            (msg.startsWith('{') && msg.endsWith('}'))
+          );
+          
+          if (looksLikeValidJson) {
+            try {
+              const parsed = JSON.parse(msg);
+              if (Array.isArray(parsed)) {
+                finalBanners = parsed as BannerType[];
+              } else if (parsed && typeof parsed === 'object') {
+                // Handle case where parsed object might contain banners array
+                if (Array.isArray(parsed.banners)) {
+                  finalBanners = parsed.banners as BannerType[];
+                } else if (Array.isArray(parsed.data)) {
+                  finalBanners = parsed.data as BannerType[];
+                }
+              }
+            } catch (parseError) {
+              console.error('Error parsing banner data from message:', parseError);
+              console.error('Raw message that failed to parse:', msg);
+              // Don't fail silently - set empty array and log the issue
+              finalBanners = [];
             }
-          } catch (parseError) {
-            console.error('Error parsing banner data from message:', parseError);
-            setBanners([]);
+          } else {
+            // Handle known non-JSON message strings gracefully
+            const lowerMsg = msg.toLowerCase();
+            if (lowerMsg.includes('no banners') || lowerMsg.includes('no banner found')) {
+              finalBanners = [];
+            } else if (lowerMsg.includes('fetched successfully') || lowerMsg.includes('banners fetched')) {
+              // If cache message, prefer any arrays found in data; otherwise empty
+              finalBanners = fromData ?? [];
+            } else {
+              // Log unexpected message format for debugging
+              console.warn('Unexpected message format (not JSON, not recognized pattern):', msg);
+              finalBanners = [];
+            }
           }
-        } else if (Array.isArray(responseData.message)) {
-          // If message is already an array, use it directly
-          setBanners(responseData.message);
-        } else if (
-          responseData.data === 'No banners found' ||
-          responseData.data === 'Banners fetched successfully from cache'
-        ) {
-          // Handle the case when no banners are found
-          console.log('No banners found');
-          setBanners([]);
+        }
+
+        if (Array.isArray(finalBanners)) {
+          setBanners(finalBanners);
         } else {
-          console.error('Unexpected response format:', responseData);
+          console.error('Unexpected response format (no banner array found):', responseData);
           setBanners([]);
         }
       } else {
@@ -99,7 +140,10 @@ export const useBanner = () => {
   }, []);
 
   // Add new banner
-  const addBanner = async (formData, bannerImage) => {
+  const addBanner = async (
+    formData: { name: string; category: string; tags: string | string[]; isActive: boolean; storeId: string | null; redirectUrl?: string },
+    bannerImage: File | null
+  ) => {
     setAddingBanner(true);
 
     try {
@@ -111,7 +155,7 @@ export const useBanner = () => {
       formDataToSend.append('category', formData.category);
 
       // Convert tags if it's a string
-      if (typeof formData.tags === 'string') {
+       if (typeof formData.tags === 'string') {
         // If it's a comma-separated string, convert to array
         const tagsArray = formData.tags.split(',').map(tag => tag.trim());
         formDataToSend.append('tags', JSON.stringify(tagsArray));
@@ -137,11 +181,7 @@ export const useBanner = () => {
       });
 
       // Make the API call with explicit Content-Type header
-      const response = await axiosInstance.post('/api/v1/banner/create', formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await api.createBanner(formDataToSend);
 
       if (response.status === 200 || response.status === 201) {
         toast({
@@ -169,11 +209,9 @@ export const useBanner = () => {
   };
 
   // Update banner status
-  const updateBannerStatus = async (bannerId, isActive, storeId) => {
+  const updateBannerStatus = async (bannerId: string, isActive: boolean, storeId: string | null) => {
     try {
-      const response = await axiosInstance.put(`/api/v1/banner/update-status/${bannerId}`, {
-        isActive,
-      });
+      const response = await api.updateBannerStatus(bannerId, isActive);
       console.log('response coming from the api after updating the status', response.data);
       if (response.status === 200) {
         toast({
@@ -194,9 +232,9 @@ export const useBanner = () => {
   };
 
   // Delete banner
-  const deleteBanner = async (bannerId, storeId) => {
+  const deleteBanner = async (bannerId: string, storeId: string | null) => {
     try {
-      await axiosInstance.delete(`api/v1/banner/delete-banner/${bannerId}`);
+      await api.deleteBanner(bannerId);
       toast({
         title: 'Success',
         description: 'Banner deleted successfully',

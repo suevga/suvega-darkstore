@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDarkStore } from '../store/darkStore';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { useForm } from 'react-hook-form';
 import { useToast } from '../hooks/use-toast';
 import { 
@@ -12,7 +12,6 @@ import {
   Save, 
   X, 
   Building2,
-  Phone,
   Calendar,
   CheckCircle,
   AlertCircle
@@ -37,6 +36,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
+  const api = useBackend();
 
   console.log('dark store details::', darkstoreDetails);
   console.log('dark store id::', darkstoreId);
@@ -64,7 +64,7 @@ export default function ProfilePage() {
     }
     try {
       setLoading(true);
-      const response = await axiosInstance.get(`/api/v1/store/getStore/${darkstoreId}`);
+      const response = await api.getStore(darkstoreId);
       console.log('darkstore details paisu backend or pora::', JSON.stringify(response));
 
       if (response.status === 200) {
@@ -100,9 +100,7 @@ export default function ProfilePage() {
       setLoading(true);
       console.log('data from useForm::', data);
 
-      const response = await axiosInstance.patch(`/api/v1/store/updateAddress/${darkstoreId}`, {
-        address: data.address,
-      });
+      const response = await api.updateStoreAddress(darkstoreId, { ...data.address });
 
       if (response.status === 200) {
         console.log('updated darkstore details::', JSON.stringify(response.data.data.updatedStore));
@@ -142,7 +140,7 @@ export default function ProfilePage() {
           street: darkstoreDetails.address.street || '',
           district: darkstoreDetails.address.district || '',
           state: darkstoreDetails.address.state || '',
-          pincode: darkstoreDetails.address.pinCode || '',
+          pincode: darkstoreDetails.address.pincode || '',
         },
       });
     }
@@ -156,7 +154,7 @@ export default function ProfilePage() {
       .toUpperCase();
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: Date) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -471,7 +469,7 @@ export default function ProfilePage() {
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">Store ID</p>
-                    <p className="text-base font-mono text-xs bg-muted px-2 py-1 rounded">
+                    <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
                       {darkstoreId || 'Not available'}
                     </p>
                   </div>
@@ -542,7 +540,7 @@ export default function ProfilePage() {
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground">Pincode</p>
                         <p className="text-base font-mono bg-muted px-2 py-1 rounded w-fit">
-                          {darkstoreDetails.address.pinCode || 'Not provided'}
+                          {darkstoreDetails.address.pincode || 'Not provided'}
                         </p>
                       </div>
                     </div>
@@ -558,7 +556,7 @@ export default function ProfilePage() {
                             darkstoreDetails.address.city,
                             darkstoreDetails.address.district,
                             darkstoreDetails.address.state,
-                            darkstoreDetails.address.pinCode
+                            darkstoreDetails.address.pincode
                           ].filter(Boolean).join(', ') || 'Address information incomplete'}
                         </p>
                       </div>

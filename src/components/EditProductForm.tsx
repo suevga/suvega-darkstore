@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useToast } from '../hooks/use-toast';
 import { Button } from './ui/button';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { X } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { Input } from './ui/input';
@@ -23,6 +23,7 @@ export function EditProductForm({ product, onClose, onSuccess }: {
   const { darkstoreId } = useDarkStore();
   const { categories } = useCategoryStore();
   const { toast } = useToast();
+  const api = useBackend();
 
   const form = useForm({
     defaultValues: {
@@ -122,13 +123,7 @@ export function EditProductForm({ product, onClose, onSuccess }: {
         formData.append('existingImages', JSON.stringify(existingImages));
       }
 
-      const response = await axiosInstance.patch(
-        `/api/v1/product/admin/product/${product._id}`,
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        }
-      );
+      const response = await api.createProduct(formData, darkstoreId || undefined);
 
       if (response.status === 200) {
         toast({

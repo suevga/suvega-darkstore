@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { BoxIcon, IndianRupeeIcon, Package, ShoppingCart, TrendingUp, Users, Calendar, Activity, ArrowUpRight, ArrowDownRight, Search, Smartphone, Monitor, Globe } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BoxIcon, IndianRupeeIcon, Package, ShoppingCart, TrendingUp, Users, Calendar, Activity, ArrowUpRight, ArrowDownRight, Search, Smartphone, Loader2, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
   Bar, 
@@ -21,43 +21,73 @@ import {
   RadialBarChart,
   RadialBar
 } from 'recharts';
-import { useCategoryStore } from '../store/categoryStore';
-import { useProductStore } from '../store/productStore';
-import useOrderStore from '../store/orderStore';
-import { useDarkStore } from '../store/darkStore';
+import { useCategoryStore } from '@/store/categoryStore';
+import { useProductStore } from '@/store/productStore';
+import useOrderStore from '@/store/orderStore';
+import { useDarkStore } from '@/store/darkStore';
+import { useDashboard } from '@/hooks/useDashboard';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
   const { totalCategoryCount } = useCategoryStore();
   const { totalProducts } = useProductStore();
   const { totalOrderCount } = useOrderStore();
   const { totalRevenue } = useDarkStore();
+  const { metrics, topSearched, loading, error, period, setPeriod } = useDashboard();
+  console.log("metrics in dashboard page::", metrics);
+  console.log("top searched in dashboard page::", topSearched);
+  console.log("period in dashboard page::", period);
+  // Format period for display
+  const getPeriodLabel = () => {
+    switch(period) {
+      case 'daily': return 'Today';
+      case 'weekly': return 'This Week';
+      case 'monthly': return 'This Month';
+      case 'yearly': return 'This Year';
+      case 'all': return 'All Time';
+      default: return 'This Month';
+    }
+  };
 
-  // Sample data for revenue over time
-  const revenueData = [
-    { month: 'Jan', revenue: 45000, orders: 120, users: 1200 },
-    { month: 'Feb', revenue: 52000, orders: 140, users: 1350 },
-    { month: 'Mar', revenue: 48000, orders: 135, users: 1420 },
-    { month: 'Apr', revenue: 61000, orders: 180, users: 1580 },
-    { month: 'May', revenue: 55000, orders: 165, users: 1650 },
-    { month: 'Jun', revenue: 67000, orders: 200, users: 1800 },
-    { month: 'Jul', revenue: 58000, orders: 175, users: 1750 },
-    { month: 'Aug', revenue: 72000, orders: 220, users: 1920 },
-    { month: 'Sep', revenue: 65000, orders: 195, users: 1870 },
-    { month: 'Oct', revenue: 78000, orders: 245, users: 2100 },
-    { month: 'Nov', revenue: 82000, orders: 260, users: 2200 },
-    { month: 'Dec', revenue: 89000, orders: 285, users: 2350 },
+  
+  
+
+  // Use real data from API if available, otherwise use fallbacks
+  const revenueData = metrics?.revenueTrend || [
+    { label: 'Jan', revenue: 45000 },
+    { label: 'Feb', revenue: 52000 },
+    { label: 'Mar', revenue: 48000 },
+    { label: 'Apr', revenue: 61000 },
+    { label: 'May', revenue: 55000 },
+    { label: 'Jun', revenue: 67000 },
+    { label: 'Jul', revenue: 58000 },
+    { label: 'Aug', revenue: 72000 },
+    { label: 'Sep', revenue: 65000 },
+    { label: 'Oct', revenue: 78000 },
+    { label: 'Nov', revenue: 82000 },
+    { label: 'Dec', revenue: 89000 },
   ];
 
-  // Sample data for order status distribution
-  const orderStatusData = [
+  // Order status distribution
+  const orderStatusData = metrics?.orderStatusBreakdown ? [
+    { name: 'Completed', value: metrics.orderStatusBreakdown.completed, fill: '#10b981' },
+    { name: 'Processing', value: metrics.orderStatusBreakdown.processing, fill: '#f59e0b' },
+    { name: 'Cancelled', value: metrics.orderStatusBreakdown.cancelled, fill: '#ef4444' },
+    { name: 'Pending', value: metrics.orderStatusBreakdown.pending, fill: '#6b7280' },
+  ] : [
     { name: 'Completed', value: 65, fill: '#10b981' },
     { name: 'Processing', value: 20, fill: '#f59e0b' },
     { name: 'Cancelled', value: 10, fill: '#ef4444' },
     { name: 'Pending', value: 5, fill: '#6b7280' },
   ];
 
-  // Sample data for top categories
-  const topCategoriesData = [
+  // Top categories data
+  const topCategoriesData = metrics?.topCategories?.map(cat => ({
+    category: cat.name,
+    sales: cat.totalRevenue,
+    orders: cat.totalQuantity
+  })) || [
     { category: 'Electronics', sales: 45000, orders: 180 },
     { category: 'Groceries', sales: 38000, orders: 250 },
     { category: 'Fashion', sales: 32000, orders: 120 },
@@ -66,8 +96,8 @@ export default function DashboardPage() {
     { category: 'Books', sales: 18000, orders: 60 },
   ];
 
-  // Sample data for daily orders
-  const dailyOrdersData = [
+  // Weekly performance data
+  const dailyOrdersData = metrics?.weeklyPerformance || [
     { day: 'Mon', orders: 25, revenue: 3200 },
     { day: 'Tue', orders: 32, revenue: 4100 },
     { day: 'Wed', orders: 28, revenue: 3600 },
@@ -77,18 +107,28 @@ export default function DashboardPage() {
     { day: 'Sun', orders: 22, revenue: 2800 },
   ];
 
-  // Sample data for top products
-  const topProductsData = [
-    { product: 'iPhone 15', sales: 25000, units: 45, category: 'Electronics' },
-    { product: 'Samsung TV', sales: 18000, units: 12, category: 'Electronics' },
-    { product: 'Nike Shoes', sales: 15000, units: 60, category: 'Fashion' },
-    { product: 'Coffee Beans', sales: 12000, units: 200, category: 'Groceries' },
-    { product: 'Laptop Stand', sales: 8000, units: 80, category: 'Electronics' },
-    { product: 'Yoga Mat', sales: 6000, units: 100, category: 'Sports' },
+  // Top products data
+  const topProductsData = metrics?.topProducts?.map(prod => ({
+    product: prod.name,
+    sales: prod.totalRevenue,
+    units: prod.totalQuantity
+  })) || [
+    { product: 'iPhone 15', sales: 25000, units: 45 },
+    { product: 'Samsung TV', sales: 18000, units: 12 },
+    { product: 'Nike Shoes', sales: 15000, units: 60 },
+    { product: 'Coffee Beans', sales: 12000, units: 200 },
+    { product: 'Laptop Stand', sales: 8000, units: 80 },
+    { product: 'Yoga Mat', sales: 6000, units: 100 },
   ];
 
-  // Sample data for customer demographics
-  const customerDemographicsData = [
+  // Customer demographics data
+  const customerDemographicsData = metrics?.customerAgeDistribution ? [
+    { name: '18-25', value: metrics.customerAgeDistribution['18-25'], fill: '#8884d8' },
+    { name: '26-35', value: metrics.customerAgeDistribution['26-35'], fill: '#82ca9d' },
+    { name: '36-45', value: metrics.customerAgeDistribution['36-45'], fill: '#ffc658' },
+    { name: '46-55', value: metrics.customerAgeDistribution['46-55'], fill: '#ff7c7c' },
+    { name: '55+', value: metrics.customerAgeDistribution['55+'], fill: '#8dd1e1' },
+  ] : [
     { name: '18-25', value: 28, fill: '#8884d8' },
     { name: '26-35', value: 35, fill: '#82ca9d' },
     { name: '36-45', value: 22, fill: '#ffc658' },
@@ -96,42 +136,19 @@ export default function DashboardPage() {
     { name: '55+', value: 3, fill: '#8dd1e1' },
   ];
 
-  // Sample data for sales by region
-  const salesByRegionData = [
-    { region: 'North', sales: 45000, orders: 320, percentage: 35 },
-    { region: 'South', sales: 38000, orders: 280, percentage: 30 },
-    { region: 'East', sales: 25000, orders: 180, percentage: 20 },
-    { region: 'West', sales: 18000, orders: 120, percentage: 15 },
+  // Platform distribution data
+  const platformData = metrics?.platformDistribution ? [
+    { platform: 'Web', users: metrics.platformDistribution.web, fill: '#0088FE' },
+    { platform: 'iOS', users: metrics.platformDistribution.ios, fill: '#00C49F' },
+    { platform: 'Android', users: metrics.platformDistribution.android, fill: '#FFBB28' },
+  ] : [
+    { platform: 'Web', users: 65, fill: '#0088FE' },
+    { platform: 'iOS', users: 25, fill: '#00C49F' },
+    { platform: 'Android', users: 10, fill: '#FFBB28' },
   ];
 
-  // Sample data for monthly growth
-  const monthlyGrowthData = [
-    { month: 'Jan', revenue: 45000, growth: 8.5, orders: 120 },
-    { month: 'Feb', revenue: 52000, growth: 15.6, orders: 140 },
-    { month: 'Mar', revenue: 48000, growth: -7.7, orders: 135 },
-    { month: 'Apr', revenue: 61000, growth: 27.1, orders: 180 },
-    { month: 'May', revenue: 55000, growth: -9.8, orders: 165 },
-    { month: 'Jun', revenue: 67000, growth: 21.8, orders: 200 },
-  ];
-
-  // Sample data for payment methods
-  const paymentMethodsData = [
-    { method: 'Credit Card', value: 45, fill: '#0088FE' },
-    { method: 'Debit Card', value: 25, fill: '#00C49F' },
-    { method: 'UPI', value: 20, fill: '#FFBB28' },
-    { method: 'Net Banking', value: 7, fill: '#FF8042' },
-    { method: 'Cash on Delivery', value: 3, fill: '#8884D8' },
-  ];
-
-  // Sample data for platform analytics
-  const platformData = [
-    { platform: 'Mobile', users: 65, orders: 450, revenue: 125000, fill: '#0088FE' },
-    { platform: 'Desktop', users: 25, orders: 180, revenue: 52000, fill: '#00C49F' },
-    { platform: 'Tablet', users: 10, orders: 70, revenue: 18000, fill: '#FFBB28' },
-  ];
-
-  // Sample data for top searched products
-  const topSearchedData = [
+  // Top searched products data
+  const topSearchedData = topSearched.length > 0 ? topSearched : [
     { product: 'iPhone 15', searches: 1250, conversions: 45, rate: 3.6 },
     { product: 'MacBook Pro', searches: 980, conversions: 28, rate: 2.9 },
     { product: 'AirPods Pro', searches: 850, conversions: 85, rate: 10.0 },
@@ -140,8 +157,14 @@ export default function DashboardPage() {
     { product: 'Coffee Machine', searches: 580, conversions: 42, rate: 7.2 },
   ];
 
-  // Sample data for search trends
-  const searchTrendsData = [
+  // Search trends data
+  const searchTrendsData = metrics?.searchTrends ? 
+    metrics.searchTrends.labels.map((label, index) => ({
+      month: label,
+      searches: metrics.searchTrends.searches[index],
+      clicks: metrics.searchTrends.clicks[index],
+      conversions: metrics.searchTrends.conversions[index]
+    })) : [
     { month: 'Jan', searches: 12500, clicks: 3800, conversions: 420 },
     { month: 'Feb', searches: 14200, clicks: 4100, conversions: 480 },
     { month: 'Mar', searches: 13800, clicks: 3950, conversions: 445 },
@@ -150,8 +173,18 @@ export default function DashboardPage() {
     { month: 'Jun', searches: 18000, clicks: 5200, conversions: 650 },
   ];
 
-  // Sample performance metrics
-  const performanceData = [
+  // Performance metrics
+  const performanceData = metrics?.kpis ? [
+    { metric: 'Order Fulfillment Rate', value: metrics.kpis.fulfillmentRate.value, target: metrics.kpis.fulfillmentRate.target, fill: '#10b981', unit: '%' },
+    { metric: 'Customer Satisfaction', value: metrics.kpis.customerSatisfaction.value, target: metrics.kpis.customerSatisfaction.target, fill: '#3b82f6', unit: '/5' },
+    { metric: 'Return Rate', value: metrics.kpis.returnRate.value, target: metrics.kpis.returnRate.target, fill: '#f59e0b', unit: '%', inverse: true },
+    { metric: 'Cart Abandonment', value: metrics.kpis.cartAbandonmentRate.value, target: metrics.kpis.cartAbandonmentRate.target, fill: '#ef4444', unit: '%', inverse: true },
+    { metric: 'Email Open Rate', value: metrics.kpis.emailOpenRate.value, target: metrics.kpis.emailOpenRate.target, fill: '#8b5cf6', unit: '%' },
+    { metric: 'Conversion Rate', value: metrics.kpis.conversionRate.value, target: metrics.kpis.conversionRate.target, fill: '#06b6d4', unit: '%' },
+    { metric: 'Average Session Duration', value: metrics.kpis.avgSessionDuration.value, target: metrics.kpis.avgSessionDuration.target, fill: '#84cc16', unit: 'min' },
+    { metric: 'Customer Retention', value: metrics.kpis.customerRetention.value, target: metrics.kpis.customerRetention.target, fill: '#f97316', unit: '%' },
+    { metric: 'Inventory Turnover', value: metrics.kpis.inventoryTurnover.value, target: metrics.kpis.inventoryTurnover.target, fill: '#ec4899', unit: 'x/year' },
+  ] : [
     { metric: 'Order Fulfillment Rate', value: 96, target: 100, fill: '#10b981', unit: '%' },
     { metric: 'Customer Satisfaction', value: 4.7, target: 5.0, fill: '#3b82f6', unit: '/5' },
     { metric: 'Return Rate', value: 3.2, target: 5.0, fill: '#f59e0b', unit: '%', inverse: true },
@@ -163,41 +196,43 @@ export default function DashboardPage() {
     { metric: 'Inventory Turnover', value: 8.5, target: 10.0, fill: '#ec4899', unit: 'x/year' },
   ];
 
-  // Calculate average order value
-  const avgOrderValue = totalRevenue && totalOrderCount ? (totalRevenue / totalOrderCount) : 2850;
+  // Calculate average order value from metrics or fallback
+  const avgOrderValue = metrics?.averageOrderValue || 
+    (totalRevenue && totalOrderCount ? (totalRevenue / totalOrderCount) : 2850);
 
+  // Stats cards data
   const stats = [
     {
       title: 'Total Revenue',
-      value: `₹${totalRevenue?.toLocaleString() || '0'}`,
-      change: '+12.5%',
-      trend: 'up',
+      value: `₹${(metrics?.totalRevenue || totalRevenue || 0).toLocaleString()}`,
+      change: `${metrics?.revenueGrowth > 0 ? '+' : ''}${metrics?.revenueGrowth?.toFixed(1) || '0'}%`,
+      trend: metrics?.revenueGrowth >= 0 ? 'up' : 'down',
       icon: IndianRupeeIcon,
       href: '/dashboard',
     },
     {
       title: 'Average Order Value',
-      value: `₹${avgOrderValue?.toLocaleString() || '2,850'}`,
-      change: '+6.3%',
-      trend: 'up',
+      value: `₹${avgOrderValue.toLocaleString()}`,
+      change: `${metrics?.aovGrowth > 0 ? '+' : ''}${metrics?.aovGrowth?.toFixed(1) || '0'}%`,
+      trend: metrics?.aovGrowth >= 0 ? 'up' : 'down',
       icon: TrendingUp,
       href: '/dashboard',
     },
     {
       title: 'Products',
-      value: `${totalProducts?.toLocaleString() || '0'}`,
+      value: `${(metrics?.totalProducts || totalProducts || 0).toLocaleString()}`,
       change: '+4.1%',
       trend: 'up',
       icon: Package,
-      href: '/dashboard/products',
+      href: '/products',
     },
     {
       title: 'Categories',
-      value: `${totalCategoryCount?.toLocaleString() || '0'}`,
+      value: `${(metrics?.totalCategories || totalCategoryCount || 0).toLocaleString()}`,
       change: '+2.3%',
       trend: 'up',
       icon: BoxIcon,
-      href: '/dashboard/categories',
+      href: '/category',
     },
   ];
 
@@ -212,10 +247,49 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500 mt-1">Welcome back! Here's what's happening with your store.</p>
         </div>
         <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+          {loading ? (
+            <Button variant="outline" disabled>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading...
+            </Button>
+          ) : (
+            <Button 
+              variant="outline" 
+              onClick={() => setPeriod(period)}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          )}
+          
+          <Select
+            value={period}
+            onValueChange={(value) => setPeriod(value as 'daily' | 'weekly' | 'monthly' | 'yearly' | 'all')}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Today</SelectItem>
+              <SelectItem value="weekly">This Week</SelectItem>
+              <SelectItem value="monthly">This Month</SelectItem>
+              <SelectItem value="yearly">This Year</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
+            </SelectContent>
+          </Select>
+          
           <Calendar className="h-4 w-4 text-gray-500" />
-          <span className="text-sm text-gray-500">Last 30 days</span>
+          <span className="text-sm text-gray-500">{getPeriodLabel()}</span>
         </div>
       </div>
+      
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -259,46 +333,52 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] sm:h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="month" 
-                    stroke="hsl(var(--foreground))" 
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    stroke="hsl(var(--foreground))" 
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `₹${value/1000}k`}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--background))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px',
-                    }}
-                    formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="hsl(var(--primary))" 
-                    fillOpacity={1} 
-                    fill="url(#colorRevenue)" 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={revenueData}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey={metrics?.revenueTrend ? "label" : "month"} 
+                      stroke="hsl(var(--foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `₹${value/1000}k`}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '6px',
+                      }}
+                      formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="hsl(var(--primary))" 
+                      fillOpacity={1} 
+                      fill="url(#colorRevenue)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -313,25 +393,31 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] sm:h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={orderStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {orderStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={orderStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {orderStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -349,15 +435,21 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueData}>
-                  <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                  <XAxis dataKey="month" stroke="hsl(var(--foreground))" tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--foreground))" tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value/1000}k`} />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }} formatter={(value) => [`₹${value.toLocaleString()}`]} />
-                  <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={metrics?.averageOrderValueOverTime || revenueData}>
+                    <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
+                    <XAxis dataKey={metrics?.averageOrderValueOverTime ? "label" : "month"} stroke="hsl(var(--foreground))" tickLine={false} axisLine={false} />
+                    <YAxis stroke="hsl(var(--foreground))" tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value/1000}k`} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }} formatter={(value) => [`₹${value.toLocaleString()}`]} />
+                    <Line type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -372,15 +464,21 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topProductsData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="product" stroke="hsl(var(--foreground))" axisLine={false} tickLine={false} angle={-45} textAnchor="end" height={60} />
-                  <YAxis stroke="hsl(var(--foreground))" axisLine={false} tickLine={false} tickFormatter={(value) => `₹${value/1000}k`} />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '6px' }} formatter={(value) => [`₹${value.toLocaleString()}`, 'Sales']} />
-                  <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topProductsData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="product" stroke="hsl(var(--foreground))" axisLine={false} tickLine={false} angle={-45} textAnchor="end" height={60} />
+                    <YAxis stroke="hsl(var(--foreground))" axisLine={false} tickLine={false} tickFormatter={(value) => `₹${value/1000}k`} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '6px' }} formatter={(value) => [`₹${value.toLocaleString()}`, 'Sales']} />
+                    <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -394,37 +492,43 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topCategoriesData} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    type="number" 
-                    stroke="hsl(var(--foreground))" 
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `₹${value/1000}k`}
-                  />
-                  <YAxis 
-                    type="category" 
-                    dataKey="category" 
-                    stroke="hsl(var(--foreground))" 
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    width={80}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--background))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px',
-                    }}
-                    formatter={(value) => [`₹${value.toLocaleString()}`, 'Sales']}
-                  />
-                  <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topCategoriesData} layout="horizontal">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      type="number" 
+                      stroke="hsl(var(--foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `₹${value/1000}k`}
+                    />
+                    <YAxis 
+                      type="category" 
+                      dataKey="category" 
+                      stroke="hsl(var(--foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      width={80}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '6px',
+                      }}
+                      formatter={(value) => [`₹${value.toLocaleString()}`, 'Sales']}
+                    />
+                    <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -439,51 +543,57 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={dailyOrdersData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="day" 
-                    stroke="hsl(var(--foreground))" 
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    yAxisId="orders"
-                    stroke="hsl(var(--foreground))" 
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis 
-                    yAxisId="revenue"
-                    orientation="right"
-                    stroke="hsl(var(--foreground))" 
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `₹${value/1000}k`}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--background))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '6px',
-                    }}
-                  />
-                  <Legend />
-                  <Bar yAxisId="orders" dataKey="orders" fill="hsl(var(--primary))" name="Orders" />
-                  <Line 
-                    yAxisId="revenue" 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#82ca9d" 
-                    strokeWidth={3}
-                    name="Revenue (₹)"
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={dailyOrdersData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="day" 
+                      stroke="hsl(var(--foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      yAxisId="orders"
+                      stroke="hsl(var(--foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      yAxisId="revenue"
+                      orientation="right"
+                      stroke="hsl(var(--foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `₹${value/1000}k`}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '6px',
+                      }}
+                    />
+                    <Legend />
+                    <Bar yAxisId="orders" dataKey="orders" fill="hsl(var(--primary))" name="Orders" />
+                    <Line 
+                      yAxisId="revenue" 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#82ca9d" 
+                      strokeWidth={3}
+                      name="Revenue (₹)"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -501,14 +611,28 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie dataKey="users" data={platformData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label />
-                  {platformData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </PieChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie dataKey="users" data={platformData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label />
+                    {platformData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                    <Tooltip 
+                      formatter={(value, name) => [`${value}%`, name]}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '6px',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -523,15 +647,42 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topSearchedData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="product" stroke="hsl(var(--foreground))" axisLine={false} tickLine={false} angle={-45} textAnchor="end" height={80} />
-                  <YAxis stroke="hsl(var(--foreground))" axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '6px' }} formatter={(value) => [value, 'Searches']} />
-                  <Bar dataKey="searches" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topSearchedData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      type="number" 
+                      stroke="hsl(var(--foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      type="category" 
+                      dataKey="product" 
+                      stroke="hsl(var(--foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      width={120}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '6px',
+                      }}
+                      formatter={(value) => [`${value} searches`, 'Count']}
+                    />
+                    <Bar dataKey="searches" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -546,17 +697,38 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie dataKey="value" data={customerDemographicsData} cx="50%" cy="50%" outerRadius={80} label>
-                    {customerDemographicsData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={customerDemographicsData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {customerDemographicsData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill || COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value, name) => [`${value} users`, name]}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '6px',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -572,25 +744,31 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={searchTrendsData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--foreground))" tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--foreground))" tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '6px',
-                  }}
-                  formatter={(value, name) => [value.toLocaleString(), name]} 
-                />
-                <Legend />
-                <Line type="monotone" dataKey="searches" stroke="#8884d8" strokeWidth={2} name="Searches" />
-                <Line type="monotone" dataKey="clicks" stroke="#82ca9d" strokeWidth={2} name="Clicks" />
-                <Line type="monotone" dataKey="conversions" stroke="#ffc658" strokeWidth={2} name="Conversions" />
-              </LineChart>
-            </ResponsiveContainer>
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={searchTrendsData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--foreground))" tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--foreground))" tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '6px',
+                    }}
+                    formatter={(value, name) => [value.toLocaleString(), name]} 
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="searches" stroke="#8884d8" strokeWidth={2} name="Searches" />
+                  <Line type="monotone" dataKey="clicks" stroke="#82ca9d" strokeWidth={2} name="Clicks" />
+                  <Line type="monotone" dataKey="conversions" stroke="#ffc658" strokeWidth={2} name="Conversions" />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </CardContent>
       </Card>

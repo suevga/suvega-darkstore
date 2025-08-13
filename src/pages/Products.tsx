@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useProductStore } from '../store/productStore';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
@@ -67,6 +67,7 @@ const Products = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { darkstoreId } = useDarkStore();
+  const api = useBackend();
   const { toast } = useToast();
   const { setProducts, products, setTotalProducts, totalProducts } = useProductStore();
   const { totalCategoryCount } = useCategoryStore();
@@ -82,15 +83,7 @@ const Products = () => {
       setLoading(true);
       setError(null);
 
-      const response = await axiosInstance.get('/api/v1/product/admin/getAllProduct', {
-        params: {
-          page: currentPage,
-          limit: 10,
-          darkStoreId: darkstoreId,
-          search: searchTerm,
-          status: statusFilter,
-        },
-      });
+      const response = await api.getAllProductsPaged(currentPage, 10, darkstoreId || undefined, searchTerm || undefined, statusFilter || undefined);
 
       const { data } = response.data;
       setProducts(data.products);
@@ -126,9 +119,7 @@ const Products = () => {
   const handleDeleteConfirm = async () => {
     try {
       if (selectedProduct) {
-        const res = await axiosInstance.delete(
-          `/api/v1/product/admin/product/${selectedProduct._id}`
-        );
+        const res = await api.deleteProduct(selectedProduct._id);
 
         if (res.data.data.isDelete === true) {
           toast({
@@ -172,9 +163,7 @@ const Products = () => {
   const toggleStatus = async (product: any) => {
     try {
       const updatedStatus = product.status === 'published' ? 'private' : 'published';
-      await axiosInstance.patch(`/api/v1/product/admin/product/${product._id}`, {
-        status: updatedStatus,
-      });
+      await api.toggleProductStatus(product._id, updatedStatus);
       toast({
         title: 'Success',
         description: `Product status changed to ${updatedStatus}`,

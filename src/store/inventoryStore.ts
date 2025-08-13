@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import axiosInstance from '../api/axiosInstance';
+import { getAdminProducts, getLowStockProducts as apiGetLowStockProducts, getInventorySummary as apiGetInventorySummary, updateInventory as apiUpdateInventory } from '../services/api';
 import type { InventoryStoreProps } from '../types/inventory';
 import type { Product } from '../types/product';
 
@@ -17,7 +17,7 @@ export const useInventoryStore = create(
       getInventory: async (storeId: string) => {
         try {
           set({ loading: true, error: null });
-          const response = await axiosInstance.get(`/api/v1/product/get-admin-products/${storeId}`);
+          const response = await getAdminProducts(storeId);
           if (response.status === 200) {
             const productData: Product[] = response.data.data?.products || [];
             set({ products: productData });
@@ -37,9 +37,7 @@ export const useInventoryStore = create(
       getLowStockProducts: async (storeId: string) => {
         try {
           set({ loading: true, error: null });
-          const response = await axiosInstance.get(
-            `/api/v1/inventory/get-low-stock-products/${storeId}`
-          );
+          const response = await apiGetLowStockProducts(storeId);
           if (response.status === 200) {
             set({ lowStockProducts: response.data.data.products as Product[] });
           }
@@ -58,9 +56,7 @@ export const useInventoryStore = create(
       getInventorySummary: async (storeId: string) => {
         try {
           set({ loading: true, error: null });
-          const response = await axiosInstance.get(
-            `/api/v1/inventory/get-inventory-summary/${storeId}`
-          );
+          const response = await apiGetInventorySummary(storeId);
           if (response.status === 200) {
             set({ inventorySummary: response.data.data as any });
           }
@@ -79,9 +75,7 @@ export const useInventoryStore = create(
       updateProductStock: async (productId: string, stock: number) => {
         try {
           set({ loading: true, error: null });
-          const response = await axiosInstance.put(`/api/v1/inventory/${productId}`, {
-            stock,
-          });
+          const response = await apiUpdateInventory(productId, stock);
           if (response.status === 200) {
             // Refresh all data after updating
             const products = get().products as Product[];

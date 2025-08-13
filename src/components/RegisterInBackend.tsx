@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Loader2, MapPin } from 'lucide-react';
-import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 
 export const RegistrationVerification = ({ children }: {children: React.ReactNode}) => {
   const { user, isLoaded } = useUser();
@@ -25,9 +25,11 @@ export const RegistrationVerification = ({ children }: {children: React.ReactNod
     setRegistrationPending,
     setDarkstoreId,
     setDarkstoreDetails,
+    setTotalRevenue
   } = useDarkStore();
 
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  const api = useBackend();
 
   useEffect(() => {
     const verifyRegistration = async () => {
@@ -38,16 +40,14 @@ export const RegistrationVerification = ({ children }: {children: React.ReactNod
       }
       setRegistrationPending(true);
       try {
-        const response = await axiosInstance.post('/api/v1/store/check', {
-          storename: user.username,
-          email: user.primaryEmailAddress.emailAddress,
-        });
-        console.log('response from backend in register page::', JSON.stringify(response.data));
+        const response = await api.checkStore(user.username, user.primaryEmailAddress.emailAddress);
+        console.log('response from backend in register page::', JSON.stringify(response.data.data.storeDetails.totalRevenue));
 
         if (response.data.data.isRegistered) {
           setDarkstoreId(response.data.data.storeDetails._id);
           setDarkstoreRegistered(true);
           setDarkstoreDetails(response.data.data.storeDetails);
+          setTotalRevenue(response.data.data.storeDetails.totalRevenue);
           setIsNewUser(false);
         } else {
           setDarkstoreRegistered(false);
@@ -84,11 +84,11 @@ export const RegistrationVerification = ({ children }: {children: React.ReactNod
     }
     setRegistrationPending(true);
     try {
-      const response = await axiosInstance.post('/api/v1/store/register', {
-        storename: user.username,
-        email: user.primaryEmailAddress?.emailAddress,
-        location: { latitude, longitude },
-      });
+      const response = await api.registerStore(
+        user.username,
+        user.primaryEmailAddress?.emailAddress,
+        { latitude, longitude }
+      );
 
       console.log('response after sucessfull register::', JSON.stringify(response.data));
 

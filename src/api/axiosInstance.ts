@@ -2,10 +2,11 @@ import axios from 'axios';
 import { envConfig } from '../utility/env.config';
 
 const axiosInstance = axios.create({
-  baseURL: envConfig.backendUrl,
+  baseURL: 'http://localhost:8080',
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 20000,
 });
 
 // Add a request interceptor

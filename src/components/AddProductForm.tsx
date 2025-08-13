@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useToast } from '../hooks/use-toast';
 import { Button } from './ui/button';
 import axiosInstance from '../api/axiosInstance';
+import { useBackend } from '../hooks/useBackend';
 import { X, Loader2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { Input } from './ui/input';
@@ -37,6 +38,7 @@ export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
   const [productImages, setProductImages] = useState<File[]>([]);
   const { darkstoreId } = useDarkStore();
   const { toast } = useToast();
+  const api = useBackend();
 
   // Add new state for categories pagination
   const [categories, setCategories] = useState<CategoryType[]>([]);
@@ -187,10 +189,7 @@ export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
         formData.append('productImages', file);
       });
 
-      const response = await axiosInstance.post('/api/v1/product/admin/createProduct', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        params: { darkstoreId },
-      });
+      const response = await api.createProduct(formData, darkstoreId || undefined);
 
       if (response.status >= 200 && response.status < 300) {
         console.log('product created successfully::', JSON.stringify(response));
