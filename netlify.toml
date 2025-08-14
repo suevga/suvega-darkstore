@@ -4,8 +4,14 @@
 
 [build.environment]
   NPM_FLAGS = "--production=false"
-  NODE_VERSION = "22"
+  NODE_VERSION = "18"
 
 # Use yarn instead of npm
 [build.processing]
   skip_processing = false
+
+# Handle SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

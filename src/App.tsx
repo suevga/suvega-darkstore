@@ -28,17 +28,36 @@ interface RouteProps {
   children: ReactNode;
 }
 
-const ProtectedRoute: FC<RouteProps> = ({ children }) => {
-  return <SignedIn>{children}</SignedIn>;
-};
+const ProtectedRoute: FC<RouteProps> = ({ children }) => (
+  <>
+    <SignedIn>{children}</SignedIn>
+    <SignedOut>
+      <Navigate to="/login" replace />
+    </SignedOut>
+  </>
+);
 
-const PublicRoute: FC<RouteProps> = ({ children }) => {
-  return <SignedOut>{children}</SignedOut>;
-};
+const PublicRoute: FC<RouteProps> = ({ children }) => (
+  <>
+    <SignedOut>{children}</SignedOut>
+    <SignedIn>
+      <Navigate to="/" replace />
+    </SignedIn>
+  </>
+);
 
 function App() {
   const { error, requestLocation } = useLocation();
 
+  // Don't block app loading for location errors in production
+  const shouldBlockForLocation = error && import.meta.env.DEV;
+
+  // For debugging in production
+  console.log('Environment check:', {
+    hasClerkKey: !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+    env: import.meta.env.MODE,
+    locationError: !!error
+  });
 
   if (!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) {
     return (
@@ -68,7 +87,8 @@ function App() {
     <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
       <Router>
         <GlobalNotificationService />
-        {error ? (
+        {/* Only block UI for location errors in development mode */}
+        {shouldBlockForLocation ? (
           <LocationError
             message={typeof error === 'string' ? error : 'Location error occurred'}
             onRetry={requestLocation}
