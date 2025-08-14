@@ -114,7 +114,7 @@ export const LoginForm = () => {
                   type="button"
                   variant="link"
                   className="px-0"
-                  onClick={() => navigate('/signup')}
+                  onClick={() => navigate('/register')}
                 >
                   Create account
                 </Button>
