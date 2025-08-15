@@ -69,8 +69,9 @@ class SocketService {
     this.darkStoreId = darkStoreId;
 
     // Use environment config for server URL when possible
-    const socketServerUrl = envConfig.socketUrl || envConfig.backendUrl || 'http://localhost:8080';
+    const socketServerUrl = envConfig.backendUrl || envConfig.socketUrl;
 
+    console.log('socketServerUrl', socketServerUrl);
     // Make sure this port matches your backend server port where socket.io is running
     this.socket = io(socketServerUrl, {
       transports: ['websocket', 'polling'], // Add polling as fallback
