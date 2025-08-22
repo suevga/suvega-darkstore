@@ -68,7 +68,8 @@ export const rejectRider = async (riderId: string, rejectionReason: string) => {
 
 // Products APIs
 export const getAdminProducts = async (storeId: string) => {
-  return axiosInstance.get(`/api/v1/product/admin/getAllProduct/${storeId}`);
+  // Get all products for a store
+  return axiosInstance.get(`/api/v1/product/admin/getAdminAllProduct/${storeId}`);
 };
 
 export const getAllProductsPaged = async (
