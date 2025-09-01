@@ -228,18 +228,7 @@ export const useBackend = () => {
       },
 
       // Products
-      async getAdminProducts(storeId: string) {
-        try {
-          const res = await api.getAdminProducts(storeId);
-          const products = res?.data?.data?.products ?? [];
-          productStore.setProducts(products);
-          productStore.setTotalProducts(products.length);
-          return res;
-        } catch (error) {
-          handleError(error, 'Failed to fetch products');
-          throw error;
-        }
-      },
+      // Removed deprecated getAdminProducts in favor of paginated fetch
       async getAllProductsPaged(
         page = 1,
         pageSize = 10,
@@ -250,6 +239,8 @@ export const useBackend = () => {
         try {
           const res = await api.getAllProductsPaged(page, pageSize, darkstoreId, search, status);
           const data = res?.data?.data;
+          console.log("products data in hook::", data);
+          
           if (data?.products) {
             productStore.setProducts(data.products);
           }
@@ -283,6 +274,16 @@ export const useBackend = () => {
           return res;
         } catch (error) {
           handleError(error, 'Failed to save product');
+          throw error;
+        }
+      },
+      async updateProduct(formData: FormData, productId: string) {
+        try {
+          const res = await api.updateProduct(formData, productId);
+          toast({ title: 'Product updated sucessfully' });
+          return res;
+        } catch (error) {
+          handleError(error, 'Failed to update product');
           throw error;
         }
       },

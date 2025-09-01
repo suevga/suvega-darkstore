@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Label } from './ui/label';
 import {
   Select,
@@ -36,66 +36,56 @@ export const BannerRedirectSelector: React.FC<BannerRedirectSelectorProps> = ({
   className = '',
 }) => {
   const [selectedType, setSelectedType] = useState<'product' | 'category' | ''>('');
-  const { products, loading: productsLoading, error: productsError } = useProducts();
+  const { products, loading: productsLoading, error: productsError, hasMore, loadMore, setPage } = useProducts();
   const { categories, loading: categoriesLoading, error: categoriesError } = useCategories();
 
-  // Reset selection when category changes
+  // Reset selection when category changes and set default type where applicable
   useEffect(() => {
-    if (category !== selectedType) {
-      setSelectedType('');
-      onRedirectUrlChange('');
+    console.log('[BannerRedirectSelector] Category changed:', category);
+    // reset target when category changes
+    onRedirectUrlChange('');
+    if (category === 'product') {
+      if (selectedType !== 'product') {
+        setSelectedType('product');
+      }
+      setPage(1);
+      console.log('[BannerRedirectSelector] Selected type set to product (direct)');
+    } else if (category === 'category') {
+      if (selectedType !== 'category') {
+        setSelectedType('category');
+      }
+      console.log('[BannerRedirectSelector] Selected type set to category (direct)');
+    } else {
+      // offer or advertisement
+      if (selectedType !== '') {
+        setSelectedType('');
+      }
+      console.log('[BannerRedirectSelector] Selected type cleared (offer/advertisement)');
     }
-  }, [category, onRedirectUrlChange]);
+  // Intentionally only depend on category to avoid effect loops from changing function identities
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category]);
 
-  // Get available options based on category
-  const getAvailableOptions = (): SelectionOption[] => {
-    switch (category) {
-      case 'product':
-        return products.map((product: ProductOption) => ({
-          value: product._id,
-          label: product.name,
-          sublabel: `$${product.price} • ${product.categoryName}`,
-          icon: <Package className="h-4 w-4" />,
-        }));
-
-      case 'category':
-        return categories.map((cat: CategoryOption) => ({
-          value: cat._id,
-          label: cat.name,
-          sublabel: `${cat.productCount} products`,
-          icon: <Tag className="h-4 w-4" />,
-        }));
-
-      case 'offer':
-      case 'advertisement':
-        const options: SelectionOption[] = [];
-        
-        // Add products
-        products.forEach((product: ProductOption) => {
-          options.push({
-            value: product._id,
-            label: product.name,
-            sublabel: `Product • $${product.price}`,
-            icon: <Package className="h-4 w-4" />,
-          });
-        });
-
-        // Add categories
-        categories.forEach((cat: CategoryOption) => {
-          options.push({
-            value: cat._id,
-            label: cat.name,
-            sublabel: `Category • ${cat.productCount} products`,
-            icon: <Tag className="h-4 w-4" />,
-          });
-        });
-
-        return options;
-
-      default:
-        return [];
+  // Get available options based on category and selectedType
+  const options = useMemo<SelectionOption[]>(() => {
+    if (category === 'product' || (category !== '' && selectedType === 'product')) {
+      return products.map((product: ProductOption) => ({
+        value: product._id,
+        label: product.name,
+        sublabel: `$${product.price} • ${product.categoryName}`,
+        icon: <Package className="h-4 w-4" />,
+      }));
     }
-  };
+    if (category === 'category' || (category !== '' && selectedType === 'category')) {
+      return categories.map((cat: CategoryOption) => ({
+        value: cat._id,
+        label: cat.name,
+        sublabel: `${cat.productCount} products`,
+        icon: <Tag className="h-4 w-4" />,
+      }));
+    }
+    return [];
+  }, [category, selectedType, products, categories]);
 
   const getCategoryDescription = (): string => {
     switch (category) {
@@ -127,9 +117,24 @@ export const BannerRedirectSelector: React.FC<BannerRedirectSelectorProps> = ({
     }
   };
 
-  const options = getAvailableOptions();
-  const isLoading = productsLoading || categoriesLoading;
-  const hasError = productsError || categoriesError;
+  const isLoading = useMemo(() => (
+    (category === 'product' || selectedType === 'product') ? productsLoading : categoriesLoading
+  ), [category, selectedType, productsLoading, categoriesLoading]);
+  const hasError = useMemo(() => (
+    (category === 'product' || selectedType === 'product') ? productsError : categoriesError
+  ), [category, selectedType, productsError, categoriesError]);
+
+  useEffect(() => {
+    console.log('[BannerRedirectSelector] State:', {
+      category,
+      selectedType,
+      isLoading,
+      hasError,
+      productsCount: products.length,
+      categoriesCount: categories.length,
+      optionsCount: options.length,
+    });
+  }, [category, selectedType, isLoading, hasError, products, categories, options]);
 
   if (!category) {
     return (
@@ -180,6 +185,30 @@ export const BannerRedirectSelector: React.FC<BannerRedirectSelectorProps> = ({
           Select Target
         </Label>
         <div className="col-span-3">
+          {/* Sub-select for offer/advertisement */}
+          {(category === 'offer' || category === 'advertisement') && (
+            <div className="mb-3">
+              <Select
+                value={selectedType}
+                onValueChange={(value) => {
+                  setSelectedType(value as 'product' | 'category');
+                  onRedirectUrlChange('');
+                  if (value === 'product') setPage(1);
+                  console.log('[BannerRedirectSelector] Sub-type selected:', value);
+                }}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type (product or category)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="product">Product</SelectItem>
+                  <SelectItem value="category">Category</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="flex items-center gap-2 p-3 border rounded-md">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -193,6 +222,12 @@ export const BannerRedirectSelector: React.FC<BannerRedirectSelectorProps> = ({
                 Failed to load options. Please try refreshing the page.
               </p>
             </div>
+          ) : (category === 'offer' || category === 'advertisement') && !selectedType ? (
+            <div className="p-3 border border-amber-200 rounded-md bg-amber-50">
+              <p className="text-sm text-amber-700">
+                Select a type to continue.
+              </p>
+            </div>
           ) : options.length === 0 ? (
             <div className="p-3 border border-amber-200 rounded-md bg-amber-50">
               <p className="text-sm text-amber-700">
@@ -204,11 +239,14 @@ export const BannerRedirectSelector: React.FC<BannerRedirectSelectorProps> = ({
           ) : (
             <Select
               value={redirectUrl}
-              onValueChange={(value) => onRedirectUrlChange(value)}
+              onValueChange={(value) => {
+                onRedirectUrlChange(value);
+                console.log('[BannerRedirectSelector] Target selected:', value);
+              }}
               required
             >
               <SelectTrigger>
-                <SelectValue placeholder={`Select ${category === 'offer' || category === 'advertisement' ? 'product or category' : category}`} />
+                <SelectValue placeholder={`Select ${category === 'offer' || category === 'advertisement' ? selectedType || 'type' : category}`} />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
                 {options.map((option) => (
@@ -232,6 +270,20 @@ export const BannerRedirectSelector: React.FC<BannerRedirectSelectorProps> = ({
                     </div>
                   </SelectItem>
                 ))}
+                {selectedType === 'product' && hasMore && (
+                  <SelectItem
+                    value="__SEE_MORE__"
+                    className="py-2 text-center text-blue-600 cursor-pointer"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      loadMore();
+                      console.log('[BannerRedirectSelector] See more clicked');
+                    }}
+                  >
+                    See more
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           )}

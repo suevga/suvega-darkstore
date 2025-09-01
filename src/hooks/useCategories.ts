@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useBackend } from './useBackend';
+import { getCategories as apiGetCategories } from '../services/api';
 import { useDarkStore } from '../store/darkStore';
 
 export interface CategoryOption {
@@ -14,7 +14,7 @@ export const useCategories = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { darkstoreId } = useDarkStore();
-  const api = useBackend();
+  // Avoid using useBackend here to prevent global store updates causing rerender loops
 
   const fetchCategories = useCallback(async () => {
     if (!darkstoreId) return;
@@ -24,7 +24,7 @@ export const useCategories = () => {
 
     try {
       // Fetch all categories (published only for banners)
-      const response = await api.getCategories(1, 100, darkstoreId, undefined, 'published');
+      const response = await apiGetCategories(1, 100, darkstoreId, undefined, 'published');
       const categoriesData = response?.data?.data?.categories || [];
       
       // Transform categories to simplified format for selection
@@ -43,7 +43,7 @@ export const useCategories = () => {
     } finally {
       setLoading(false);
     }
-  }, [darkstoreId, api]);
+  }, [darkstoreId]);
 
   useEffect(() => {
     fetchCategories();

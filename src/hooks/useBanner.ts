@@ -141,7 +141,7 @@ export const useBanner = () => {
 
   // Add new banner
   const addBanner = async (
-    formData: { name: string; category: string; tags: string | string[]; isActive: boolean; storeId: string | null; redirectUrl?: string },
+    formData: { name: string; category: string; tags: string | string[]; isActive: boolean; storeId: string | null; redirectUrl: string },
     bannerImage: File | null
   ) => {
     setAddingBanner(true);
@@ -166,6 +166,9 @@ export const useBanner = () => {
       // Convert boolean to string
       formDataToSend.append('isActive', String(formData.isActive));
       formDataToSend.append('storeId', formData.storeId);
+      
+      // Append redirectUrl - send empty string if not available
+      formDataToSend.append('redirectUrl', formData.redirectUrl || '');
 
       // Append the file with the correct field name expected by the backend
       formDataToSend.append('bannerImage', bannerImage);
@@ -177,6 +180,7 @@ export const useBanner = () => {
         tags: formData.tags,
         isActive: formData.isActive,
         storeId: formData.storeId,
+        redirectUrl: formData.redirectUrl,
         bannerImage: bannerImage ? bannerImage.name : 'No image',
       });
 

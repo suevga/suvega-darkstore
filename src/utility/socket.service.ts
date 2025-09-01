@@ -73,7 +73,7 @@ class SocketService {
 
     console.log('socketServerUrl', socketServerUrl);
     // Make sure this port matches your backend server port where socket.io is running
-    this.socket = io(socketServerUrl, {
+    this.socket = io(envConfig.backendUrl, {
       transports: ['websocket', 'polling'], // Add polling as fallback
       reconnection: true,
       reconnectionAttempts: 10,

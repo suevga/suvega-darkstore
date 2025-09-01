@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getAdminProducts, getLowStockProducts as apiGetLowStockProducts, getInventorySummary as apiGetInventorySummary, updateInventory as apiUpdateInventory } from '../services/api';
+import { getAllProductsPaged as apiGetAllProductsPaged, getLowStockProducts as apiGetLowStockProducts, getInventorySummary as apiGetInventorySummary, updateInventory as apiUpdateInventory } from '../services/api';
 import type { InventoryStoreProps } from '../types/inventory';
 import type { Product } from '../types/product';
 
@@ -17,7 +17,7 @@ export const useInventoryStore = create(
       getInventory: async (storeId: string) => {
         try {
           set({ loading: true, error: null });
-          const response = await getAdminProducts(storeId);
+          const response = await apiGetAllProductsPaged(1, 100, storeId, undefined, 'published');
           if (response.status === 200) {
             const productData: Product[] = response.data.data?.products || [];
             set({ products: productData });

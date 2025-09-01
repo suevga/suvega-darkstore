@@ -114,7 +114,7 @@ export function EditProductForm({ product, onClose, onSuccess }: {
       }
 
       // Append new images
-      productImages.forEach((file, index) => {
+      productImages.forEach((file,_) => {
         formData.append('productImages', file);
       });
 
@@ -123,7 +123,7 @@ export function EditProductForm({ product, onClose, onSuccess }: {
         formData.append('existingImages', JSON.stringify(existingImages));
       }
 
-      const response = await api.createProduct(formData, darkstoreId || undefined);
+      const response = await api.updateProduct(formData, product._id);
 
       if (response.status === 200) {
         toast({

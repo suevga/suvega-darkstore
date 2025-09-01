@@ -66,12 +66,6 @@ export const rejectRider = async (riderId: string, rejectionReason: string) => {
   });
 };
 
-// Products APIs
-export const getAdminProducts = async (storeId: string) => {
-  // Get all products for a store
-  return axiosInstance.get(`/api/v1/product/admin/getAdminAllProduct/${storeId}`);
-};
-
 export const getAllProductsPaged = async (
   page = 1,
   pageSize = 10,
@@ -94,6 +88,12 @@ export const createProduct = async (formData: FormData, darkstoreId?: string) =>
   return axiosInstance.post('/api/v1/product/admin/createProduct', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     params: { darkstoreId },
+  });
+};
+
+export const updateProduct = async (formData: FormData, productId: string) => {
+  return axiosInstance.patch(`/api/v1/product/admin/product/${productId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
 

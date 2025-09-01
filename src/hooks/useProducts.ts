@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useBackend } from './useBackend';
+import { getAllProductsPaged as apiGetAllProductsPaged } from '../services/api';
 import { useDarkStore } from '../store/darkStore';
 import type { Product } from '../types/product';
 
@@ -14,8 +14,10 @@ export const useProducts = () => {
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const { darkstoreId } = useDarkStore();
-  const api = useBackend();
+  // Avoid using useBackend here to prevent global store updates causing rerender loops
 
   const fetchProducts = useCallback(async () => {
     if (!darkstoreId) return;
@@ -24,8 +26,12 @@ export const useProducts = () => {
     setError(null);
 
     try {
-      const response = await api.getAdminProducts(darkstoreId);
+      const response = await apiGetAllProductsPaged(page, 10, darkstoreId, undefined, 'published');
+
+      console.log("getting all products in use products  hook::", response);
+      
       const productsData = response?.data?.data?.products || [];
+      const pagination = response?.data?.data?.pagination;
       
       // Transform products to simplified format for selection
       const transformedProducts: ProductOption[] = productsData.map((product: Product) => ({
@@ -37,7 +43,17 @@ export const useProducts = () => {
           : product.category?.categoryName || 'Unknown Category'
       }));
 
-      setProducts(transformedProducts);
+      setProducts(prev => {
+        if (page === 1) return transformedProducts;
+        const existing = new Map(prev.map(p => [p._id, p]));
+        for (const p of transformedProducts) existing.set(p._id, p);
+        return Array.from(existing.values());
+      });
+      if (pagination) {
+        setHasMore(pagination.currentPage < pagination.totalPages);
+      } else {
+        setHasMore(false);
+      }
     } catch (err) {
       console.error('Error fetching products:', err);
       setError('Failed to fetch products');
@@ -45,16 +61,23 @@ export const useProducts = () => {
     } finally {
       setLoading(false);
     }
-  }, [darkstoreId, api]);
+  }, [darkstoreId, page]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
+  const loadMore = useCallback(() => {
+    setPage(prev => prev + 1);
+  }, []);
+
   return {
     products,
     loading,
     error,
+    hasMore,
+    loadMore,
+    setPage,
     refetch: fetchProducts,
   };
 };

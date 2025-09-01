@@ -23,6 +23,7 @@ import { LocationError } from './components/LocationError';
 
 // Define ProtectedRoute component
 import type { ReactNode, FC } from 'react';
+import { envConfig } from './utility/env.config';
 
 interface RouteProps {
   children: ReactNode;
@@ -84,7 +85,7 @@ function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
+    <ClerkProvider publishableKey={envConfig.clerkTestPublishableKey}>
       <Router>
         <GlobalNotificationService />
         {/* Only block UI for location errors in development mode */}
