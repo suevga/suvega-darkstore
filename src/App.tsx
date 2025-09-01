@@ -85,7 +85,7 @@ function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={envConfig.clerkTestPublishableKey}>
+    <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || envConfig.clerkPublishableKey}>
       <Router>
         <GlobalNotificationService />
         {/* Only block UI for location errors in development mode */}
