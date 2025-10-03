@@ -1,17 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useToast } from '../hooks/use-toast';
 import { Button } from './ui/button';
-import axiosInstance from '../api/axiosInstance';
 import { useBackend } from '../hooks/useBackend';
-import { X, Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useDarkStore } from '../store/darkStore';
-// import { useCategoryStore } from '../store/categoryStore';
 import { ImagePreview } from './ImagePreview';
+import { CategorySelector } from './CategorySelector';
 
 interface AddProductFormProps {
   onClose: () => void;
@@ -28,24 +27,12 @@ interface ProductFormData {
   status: string;
 }
 
-interface CategoryType {
-  _id: string;
-  categoryName: string;
-}
-
 export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [productImages, setProductImages] = useState<File[]>([]);
   const { darkstoreId } = useDarkStore();
   const { toast } = useToast();
   const api = useBackend();
-
-  // Add new state for categories pagination
-  const [categories, setCategories] = useState<CategoryType[]>([]);
-  const [categoryPage, setCategoryPage] = useState(1);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
-  const [hasMoreCategories, setHasMoreCategories] = useState(true);
-  const selectContentRef = useRef<HTMLDivElement>(null);
 
   const form = useForm({
     defaultValues: {
@@ -59,93 +46,6 @@ export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
     },
   });
 
-  // Function to fetch categories with pagination
-  const fetchCategories = async (page = 1) => {
-    try {
-      setIsLoadingCategories(true);
-      console.log(`Fetching categories page ${page} for darkstore ${darkstoreId}`);
-
-      const response = await axiosInstance.get('/api/v1/category/admin/getcategories', {
-        params: {
-          page,
-          limit: 10,
-          darkStoreId: darkstoreId,
-        },
-      });
-
-      console.log('Categories API response:', response.data);
-
-      const { data } = response.data;
-
-      if (!data || !data.categories) {
-        console.error('Invalid response format:', response.data);
-        toast({
-          title: 'Error',
-          description: 'Invalid data format received from server',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const newCategories = data.categories;
-
-      if (page === 1) {
-        setCategories(newCategories);
-      } else {
-        // Make sure we're not adding duplicates
-        setCategories(prev => {
-          const existingIds = prev.map((cat: CategoryType) => cat._id);
-          const filteredNew = newCategories.filter((cat: CategoryType) => !existingIds.includes(cat._id));
-          return [...prev, ...filteredNew];
-        });
-      }
-
-      // Check if there are more categories to load
-      const hasNext =
-        data.pagination?.hasNextPage || data.pagination?.currentPage < data.pagination?.totalPages;
-
-      console.log(
-        `Has more categories: ${hasNext}, Current page: ${data.pagination?.currentPage}, Total pages: ${data.pagination?.totalPages}`
-      );
-
-      setHasMoreCategories(hasNext);
-      setCategoryPage(page);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      toast({
-        title: 'Error',
-        description:
-        'Failed to load categories: ' + ((error as any).response?.data?.message || (error as Error).message),
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoadingCategories(false);
-    }
-  };
-
-  // Load initial categories
-  useEffect(() => {
-    fetchCategories();
-  }, [darkstoreId]);
-
-  // Load more categories on button click
-  const loadMoreCategories = () => {
-    console.log(
-      `Loading more categories, current page: ${categoryPage}, has more: ${hasMoreCategories}`
-    );
-    if (hasMoreCategories && !isLoadingCategories) {
-      const nextPage = categoryPage + 1;
-      console.log(`Fetching page ${nextPage}`);
-      fetchCategories(nextPage);
-    }
-  };
-
-  // Handle category selection (commented out as not currently used)
-  // const handleCategorySelect = (categoryId: string) => {
-  //   setSelectedCategoryId(categoryId);
-  //   form.setValue('categoryId', categoryId);
-  // };
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const newImages = files.filter(
@@ -155,7 +55,6 @@ export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
     );
 
     const limitedImages = newImages.slice(0, 5 - productImages.length);
-
     setProductImages(prev => [...prev, ...limitedImages]);
   };
 
@@ -192,19 +91,15 @@ export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
       const response = await api.createProduct(formData, darkstoreId || undefined);
 
       if (response.status >= 200 && response.status < 300) {
-        console.log('product created successfully::', JSON.stringify(response));
-
         toast({
           title: 'Product Created',
           description: 'New product created successfully',
         });
 
-        // Call onSuccess if provided
         if (typeof onSuccess === 'function') {
           onSuccess();
         }
 
-        // Ensure the form closes
         if (typeof onClose === 'function') {
           onClose();
         }
@@ -285,49 +180,14 @@ export function AddProductForm({ onClose, onSuccess }: AddProductFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={loading}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent ref={selectContentRef} className="max-h-[200px] relative">
-                    {categories.map(category => (
-                      <SelectItem key={category._id} value={category._id}>
-                        {category.categoryName}
-                      </SelectItem>
-                    ))}
-
-                    {/* Always show the button for testing */}
-                    <div className="py-2 px-2 border-t mt-1 sticky bottom-0 bg-white">
-                      <Button
-                        type="button"
-                        variant="default"
-                        size="sm"
-                        className="w-full"
-                        onClick={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          // Use a timeout to prevent dropdown from closing
-                          setTimeout(() => {
-                            loadMoreCategories();
-                          }, 10);
-                          console.log('Show More button clicked');
-                        }}
-                        disabled={isLoadingCategories}
-                      >
-                        {isLoadingCategories ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Loading Categories...
-                          </>
-                        ) : (
-                          'Show More Categories'
-                        )}
-                      </Button>
-                    </div>
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <CategorySelector
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={loading}
+                    darkstoreId={darkstoreId || ''}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

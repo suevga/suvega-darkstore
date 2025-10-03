@@ -19,6 +19,7 @@ interface CategoryFormData {
   categoryName: string;
   description: string;
   status: string;
+  deliveryTime: string;
   featuredImage: File | null;
 }
 
@@ -33,6 +34,7 @@ export function AddCategoryForm({ onClose, onSuccess }: AddCategoryFormProps) {
       categoryName: '',
       description: '',
       status: 'private',
+      deliveryTime: "15",
       featuredImage: null,
     },
   });
@@ -46,6 +48,7 @@ export function AddCategoryForm({ onClose, onSuccess }: AddCategoryFormProps) {
       formData.append('categoryName', values.categoryName);
       formData.append('description', values.description);
       formData.append('darkStoreId', darkstoreId || '');
+      formData.append('deliveryTime', values.deliveryTime || '15')
       formData.append('status', values.status);
 
       if (values.featuredImage) {
@@ -120,6 +123,33 @@ export function AddCategoryForm({ onClose, onSuccess }: AddCategoryFormProps) {
                   disabled={loading}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="deliveryTime"
+          rules={{
+            required: 'deliveryTime is required'
+          }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Delivery Time</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loading}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select delivery time" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="1hour">1 hour</SelectItem>
+                  <SelectItem value="1day">1 day</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

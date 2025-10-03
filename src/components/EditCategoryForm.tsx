@@ -21,6 +21,7 @@ export function EditCategoryForm({ category, onClose }: {
       categoryName: category.categoryName,
       description: category.description,
       status: category.status,
+      deliveryTime: category.deliveryTime,
       featuredImage: null,
     },
   });
@@ -32,6 +33,7 @@ export function EditCategoryForm({ category, onClose }: {
       formData.append('categoryName', values.categoryName);
       formData.append('description', values.description);
       formData.append('status', values.status);
+      formData.append('deliveryTime', values.deliveryTime);
       if (values.featuredImage) {
         formData.append('featuredImage', values.featuredImage);
       }
@@ -41,6 +43,7 @@ export function EditCategoryForm({ category, onClose }: {
       updateForm.append('categoryName', values.categoryName);
       updateForm.append('description', values.description);
       updateForm.append('status', values.status);
+      updateForm.append('deliveryTime', values.deliveryTime);
       if (values.featuredImage) updateForm.append('featuredImage', values.featuredImage);
 
       const response = await api.updateCategory(category._id, updateForm);
@@ -92,6 +95,30 @@ export function EditCategoryForm({ category, onClose }: {
               <FormControl>
                 <Textarea placeholder="Enter category description" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="deliveryTime"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Delivery Time</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select delivery time" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="1hour">1 hour</SelectItem>
+                  <SelectItem value="1day">1 day</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

@@ -9,8 +9,8 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useDarkStore } from '../store/darkStore';
-import { useCategoryStore } from '../store/categoryStore';
 import { ImagePreview } from './ImagePreview';
+import { CategorySelector } from './CategorySelector';
 
 export function EditProductForm({ product, onClose, onSuccess }: {
   product: any;
@@ -21,7 +21,6 @@ export function EditProductForm({ product, onClose, onSuccess }: {
   const [productImages, setProductImages] = useState<any[]>([]);
   const [existingImages, setExistingImages] = useState([]);
   const { darkstoreId } = useDarkStore();
-  const { categories } = useCategoryStore();
   const { toast } = useToast();
   const api = useBackend();
 
@@ -209,24 +208,14 @@ export function EditProductForm({ product, onClose, onSuccess }: {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={loading}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {categories.map(category => (
-                      <SelectItem key={category._id} value={category._id}>
-                        {category.categoryName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <CategorySelector
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={loading}
+                    darkstoreId={darkstoreId || ''}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

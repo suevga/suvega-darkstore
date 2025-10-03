@@ -205,7 +205,7 @@ export default function DashboardPage() {
     {
       title: 'Total Revenue',
       value: `₹${(metrics?.totalRevenue || totalRevenue || 0).toLocaleString()}`,
-      change: `${metrics?.revenueGrowth > 0 ? '+' : ''}${metrics?.revenueGrowth?.toFixed(1) || '0'}%`,
+      change: `${metrics?.revenueGrowth > 0 ? '+' : ''}${(typeof metrics?.revenueGrowth === 'number' ? metrics.revenueGrowth.toFixed(1) : '0')}%`,
       trend: metrics?.revenueGrowth >= 0 ? 'up' : 'down',
       icon: IndianRupeeIcon,
       href: '/dashboard',
@@ -213,7 +213,7 @@ export default function DashboardPage() {
     {
       title: 'Average Order Value',
       value: `₹${avgOrderValue.toLocaleString()}`,
-      change: `${metrics?.aovGrowth > 0 ? '+' : ''}${metrics?.aovGrowth?.toFixed(1) || '0'}%`,
+      change: `${metrics?.aovGrowth > 0 ? '+' : ''}${(typeof metrics?.aovGrowth === 'number' ? metrics.aovGrowth.toFixed(1) : '0')}%`,
       trend: metrics?.aovGrowth >= 0 ? 'up' : 'down',
       icon: TrendingUp,
       href: '/dashboard',

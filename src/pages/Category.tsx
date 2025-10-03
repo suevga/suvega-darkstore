@@ -88,6 +88,8 @@ export default function CategoriesPage() {
       const response = await api.getCategories(currentPage, 10, darkstoreId || undefined, searchTerm || undefined, statusFilter || undefined);
 
       const { data } = response.data;
+      console.log("category from backend::", data);
+      
       setCategories(data.categories);
       setTotalPages(data.pagination.totalPages);
       setTotalCategoryCount(data.pagination.total);
